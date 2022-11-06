@@ -1,0 +1,43 @@
+<script>
+    var examples = ["Do you like feet ?", "Are you fine ?"];
+    properties.question = "";
+    properties.exampleIndex = 0;
+    properties.response = {
+        image: ""
+    };
+    properties.error = "";
+
+    setInterval(() => {
+        properties.exampleIndex++;
+        properties.exampleIndex %= examples.length;
+    }, 2000);
+
+    function askQuestion() {
+        properties.response = { image: "" };
+        if (!properties.question.endsWith("?")) {
+            properties.error = "No question mark";
+            return;
+        }
+        properties.error = "Loading...";
+        try {
+            fetch("https://yesno.wtf/api")
+                .then(resp => resp.json())
+                .then(resp => {
+                    properties.response = resp;
+                    properties.error = "";
+                })
+                .catch(e => properties.error = e.message);
+        } catch (e) {
+            properties.error = e.message;
+        }
+    }
+</script>
+
+<h1>Ask yes/no question</h1>
+
+<input data-model="this.question" data-bind-placeholder="examples[this.exampleIndex]" data-update="this.exampleIndex" />
+<button data-on-click="askQuestion()">Ask</button>
+<span data-bind="this.error" data-update="this.error" style="color:red"></span>
+
+<br />
+<img data-bind-src="this.response.image" data-update="this.response" />
