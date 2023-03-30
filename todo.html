@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <title data-bind="this.tasks.length+' tasks'" data-update="this.tasks.length"></title>
-        <script src="js.js"></script>
+        <script src="anchovy.js"></script>
         <script>
             properties.tasks = [
                 { text: "buy fruits" },
@@ -26,7 +26,7 @@
         <ul data-for-each="task" data-for-index="index" data-for-in="this.tasks" data-update="this.tasks.length|this.tasks">
             <li>
                 <input type="checkbox" data-model="this.task.striked" />
-                <span contenteditable data-model="this.task.text" data-bind-class="'task'+(this.task.striked?' completed':'')"></span>
+                <span contenteditable data-model="this.task.text" data-bind-class="'task'+(this.task.striked?' completed':'')" data-update="this.task.striked"></span>
                 <button data-on-click="this.tasks.splice(this.tasks.indexOf(this.task),1);">Delete</button>
             </li>
         </ul>
