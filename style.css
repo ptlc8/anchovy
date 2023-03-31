@@ -1,0 +1,78 @@
+:root {
+    font-family: Arial, Helvetica, sans-serif;
+}
+body {
+    margin: 0;
+}
+
+/* Header */
+header {
+    position: sticky;
+    top: 0;
+    background-color: skyblue;
+    padding: 0 1em;
+}
+header .logo {
+    height: 8em;
+    vertical-align: middle;
+}
+header h1 {
+    display: inline-block;
+    vertical-align: middle;
+}
+header:after {
+    content: "";
+}
+
+/* Main */
+section {
+    padding: 1em 2em;
+    background-color: #fecf6a;
+}
+section:nth-child(2n+1) {
+    background-color: #82caaf;
+}
+@media (orientation: landscape) {
+    header {
+        padding: 0 4em;
+    }
+    section {
+        padding: 3em 10em;
+    }
+}
+
+/* Examples displayer */
+.examples {
+    display: flex;
+    padding: 0.5em;
+    border-radius: 0.5em;
+    background-color: #df1c44;
+}
+.examples .view {
+    flex: 5;
+    background-color: white;
+    margin: .25em;
+    padding: .5em;
+    border-radius: .5em;
+}
+.examples .code {
+    flex: 5;
+    min-height: 16em;
+    background-color: white;
+    margin: .25em;
+    border-radius: .5em;
+    resize: none;
+}
+.examples .list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.examples .list button {
+    margin: .25em;
+    padding: .5em;
+    background-color: white;
+    border: .2em outset white;
+    border-radius: .5em;
+    cursor: pointer;
+}

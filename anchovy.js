@@ -60,6 +60,8 @@ function update(el, newProperties) {
             el[el.type == "checkbox" ? "checked" : "value"] = value;
         } else if ("SELECT" == el.tagName) {
             el.value = value;
+        }  else if ("TEXTAREA" == el.tagName) {
+            el.innerHTML = value;
         } else if (el.innerText != value)
             el.innerText = value;
     }

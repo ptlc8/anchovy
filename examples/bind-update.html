@@ -1,0 +1,9 @@
+<script>
+    properties.number = 7;
+    // number will increment every second
+    setInterval(() => properties.number++, 1000);
+</script>
+
+<h2>data-bind and data-update</h2>
+
+number is <span data-model="this.number"></span>

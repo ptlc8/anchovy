@@ -1,0 +1,14 @@
+<script>
+    property.smile = false;
+    function getSmileImage() {
+        if (properties.smile)
+            return "https://ambi.dev/pcv/assets/player.png";
+        else
+            return "https://ambi.dev/bark/assets/icon.png";
+    }
+</script>
+
+<h2>data-bind-* and data-on-*</h2>
+
+<img width="200" data-bind-src="getSmileImage()" data-update="this.smile" />
+<button data-on-click="this.smile=!this.smile">Switch emotion</button>

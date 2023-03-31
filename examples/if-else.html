@@ -1,0 +1,11 @@
+<script>
+    properties.number = 7;
+</script>
+
+<h2>data-if, data-elif and data-else</h2>
+
+<input type="number" data-model="this.number" />
+
+<b data-if="this.number > 7" data-update="this.number">greater than 7</b>
+<u data-elif="this.number < 2">lower than 2</u>
+<i data-else>between 2 and 7</i>
