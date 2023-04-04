@@ -1,64 +1,67 @@
-<script src="anchovy.js"></script>
+<script src="anchovy2.js"></script>
 <script>
-    Object.assign(properties, {
-        number: 7,
-        text: "az",
-        smile: false
+    var model = Anchovy.Model({
+        text: "Hello world!",
+        secret: "I'm secret",
+        striked: false,
+        colors: ["pink", "", "lime", "cyan", "coral"],
+        color: 0,
+        getColor: function() {
+            return this.colors[this.color % this.colors.length];
+        },
+        w: 10,
+        h: 10
     });
-    setInterval(() => properties.number = [6, 7, 8][~~(Math.random() * 3)], 1000);
-    function getSmileImage() {
-        return properties.smile ? "https://ambi.dev/pcv/assets/player.png" : "https://ambi.dev/bark/assets/icon.png";
-    }
 </script>
 
-<style>
-    body {
-        margin: 0 10% 10em 10%;
-    }
-</style>
-
 <body>
-    <h1>Tests</h1>
-
-    <h2>-bind and -update</h2>
-    Value : <span data-bind="this.number" data-update="this.number"></span>
-    <hr />
-
-    <h2>-model</h2>
-    <input type="text" data-model="this.text" />
+    <i data-bind="Anchovy.scopes.size + ' scopes'"></i>
     <br />
-    Input : <span data-bind="this.text" data-update="this.text"></span>
-    <hr />
 
-    <h2>-if, -elif and -else</h2>
-    <b data-if="this.number==7" data-update="this.number">sept</b>
-    <u data-elif="this.number==6">six</u>
-    <i data-else>nor sept nor six</i>
-    <hr />
+    <input data-model="text" />
+    <h1 data-bind="text" data-bind-style="striked?'text-decoration:line-through':''"></h1>
 
-    <h2>-for</h2>
-    <h3>Array : -for-each</h3>
-    <ol data-for-each="prof" data-for-in="['Boumiz','Abo','Guezguez']">
-        <li data-bind="this.prof"></li>
-    </ol>
+    <span data-bind="secret" data-if="!text.includes('!')"></span>
+    <span data-else>Nothing here</span>
 
-    <h3>Counter : -for-test</h3>
-    <ul data-for-init="this.i=1" data-for-test="this.i<=3" data-for-next="this.i++">
-        <li>
-            <span data-bind="this.i"></span><sup data-if="this.i==1">st</sup><sup data-elif="this.i==2">nd</sup><sup
-                data-else>rd</sup> element
-        </li>
-        <li>
-            <span data-bind="this.i+0.5"></span><sup>th</sup> element
-        </li>
+    <br />
+
+    <code data-html="'HTML: ' + text"></code>
+
+    <ul data-for-each="item" data-for-in="['a','b','c']">
+        <li data-bind="item"></li>
     </ul>
-    <hr />
 
-    <h2>-bind-* and -on-*</h2>
-    <img width="200" data-bind-src="getSmileImage()" data-update="this.smile" />
-    <button data-on-click="this.smile=!this.smile">Switch emotion</button>
-    <hr />
+    <div data-repeat="w" data-repeat-index="i">
+        <!--<b data-bind="i"></b>-->
+        <div data-repeat="h" data-repeat-index="j" style="display:inline-flex;flex-direction:column;">
+            <span data-bind="j"></span>
+        </div>
+    </div>
 
-    <h2>-view</h2>
-    <div data-view="question.view.html"></div>
+    <input type="number" data-model="w" placeholder="width" />
+    <input type="number" data-model="h" placeholder="height" />
+    <br/>
+
+    <span data-bind="[...text].length"></span>
+    <div data-for-each="letter" data-for-in="[...text]" id="lettersDiv">
+        <!--<div data-for-each="letter" data-for-in="[...text]" style="display:inline-flex;flex-direction:column;">-->
+            <span data-bind="letter"></span>
+        <!--</div>-->
+    </div>
+
+    <input type="checkbox" data-model="striked" />
+    
+    <textarea data-model="text"></textarea>
+
+    <div data-bind-style="'background-color:'+getColor()" data-on-mouseenter="color++" data-on-mouseout="color++">
+        Hover me!
+    </div>
+
+    <div data-view="test.view.html" data-param-text="This is a a view test"></div>
+    <br/>
+    <div data-view="test.view.html" data-param-text="This is a a view test"></div>
+    <br/>
+    <div data-view="test.view.html" data-param-text="This is a a view test"></div>
+    
 </body>

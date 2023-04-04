@@ -1,0 +1,11 @@
+<script>
+    var testViewModel = new Anchovy.Model({
+        zoom: 1,
+        id: Math.random() * 100
+    });
+    setInterval(function() {
+        testViewModel.zoom = Math.random() / 2 + .5;
+    }, 1000);
+</script>
+
+<span data-bind-style="`position: absolute; transform: scale(${zoom}); transition: transform 1s linear; font-size: 2em;`">This is a view test</span>
