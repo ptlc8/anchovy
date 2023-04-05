@@ -1,5 +1,5 @@
 <script>
-    var examples = ["Do you like feet ?", "Are you fine ?"];
+    var questionExamples = ["Do you like feet ?", "Are you fine ?"];
     properties.question = "";
     properties.exampleIndex = 0;
     properties.response = {
@@ -9,7 +9,7 @@
 
     setInterval(() => {
         properties.exampleIndex++;
-        properties.exampleIndex %= examples.length;
+        properties.exampleIndex %= questionExamples.length;
     }, 2000);
 
     function askQuestion() {
@@ -35,9 +35,9 @@
 
 <h1>Ask yes/no question</h1>
 
-<input data-model="this.question" data-bind-placeholder="examples[this.exampleIndex]" data-update="this.exampleIndex" />
+<input data-model="question" data-bind-placeholder="questionExamples[exampleIndex]" data-update="exampleIndex" />
 <button data-on-click="askQuestion()">Ask</button>
-<span data-bind="this.error" data-update="this.error" style="color:red"></span>
+<span data-bind="error" data-update="error" style="color:red"></span>
 
 <br />
-<img data-bind-src="this.response.image" data-update="this.response" />
+<img data-bind-src="response.image" data-update="response" />

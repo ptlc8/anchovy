@@ -1,5 +1,5 @@
 
-<!--<title data-bind="this.tasks.length+' tasks'" data-update="this.tasks.length"></title>-->
+<!--<title data-bind="tasks.length+' tasks'" data-update="tasks.length"></title>-->
 
 <script>
     properties.tasks = [
@@ -9,18 +9,18 @@
 </script>
 
 <h1>Todo list</h1>
-<ul data-for-each="task" data-for-index="index" data-for-in="this.tasks" data-update="this.tasks.length|this.tasks">
+<ul data-for-each="task" data-for-index="index" data-for-in="tasks" data-update="tasks.length|tasks">
     <li>
-        <input type="checkbox" data-model="this.task.striked" />
-        <span contenteditable data-model="this.task.text" data-bind-class="'task'+(this.task.striked?' completed':'')" data-update="this.task.striked"></span>
-        <button data-on-click="this.tasks.splice(this.tasks.indexOf(this.task),1);">Delete</button>
+        <input type="checkbox" data-model="task.striked" />
+        <span contenteditable data-model="task.text" data-bind-class="'task'+(task.striked?' completed':'')" data-update="task.striked"></span>
+        <button data-on-click="tasks.splice(tasks.indexOf(task),1);">Delete</button>
     </li>
 </ul>
-<span data-bind-style="this.tasks.length>5?'color:red':''" data-update="this.tasks.length">
-    <span data-bind="this.tasks.length" data-update=""></span> items
+<span data-bind-style="tasks.length>5?'color:red':''" data-update="tasks.length">
+    <span data-bind="tasks.length" data-update=""></span> items
 </span>
 <br />
-<button data-on-click="this.tasks.push({text:''})">Add</button>
+<button data-on-click="tasks.push({text:''})">Add</button>
 
 <style>
     .task {

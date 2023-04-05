@@ -29,11 +29,12 @@ function update(el, newProperties) {
 
     // data-model
     if (el.dataset.model) {
-        el.setAttribute("data-bind", el.dataset.model);
+        el.dataset.bind = el.dataset.model;
         var updateSet = new Set(el.getAttribute("data-update") ? el.getAttribute("data-update").split("|") : []);
         updateSet.add(el.dataset.model)
-        el.setAttribute("data-update", [...updateSet].join("|"));
-        el.setAttribute("oninput", "onInput(this,'" + el.dataset.model + "')");
+        el.dataset.update = [...updateSet].join("|");
+        el.removeEventListener("input", onModelInput);
+        el.addEventListener("input", onModelInput);
     }
 
     // data-update : if updatable add it to registry
@@ -48,20 +49,18 @@ function update(el, newProperties) {
 
     // data-if attribute
     if (el.dataset.if) {
-        let condition = evalContext(el.dataset.if, context);
+        let condition = evalExpression(el.dataset.if, el);
         showHide(el, condition);
         updateAfterIf(el, condition, context);
     }
 
     // data-bind attribute
     if (el.dataset.bind) {
-        let value = evalContext(el.dataset.bind, context);
+        let value = evalExpression(el.dataset.bind, el);
         if ("INPUT" == el.tagName) {
             el[el.type == "checkbox" ? "checked" : "value"] = value;
-        } else if ("SELECT" == el.tagName) {
+        } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
             el.value = value;
-        }  else if ("TEXTAREA" == el.tagName) {
-            el.innerHTML = value;
         } else if (el.innerText != value)
             el.innerText = value;
     }
@@ -69,14 +68,16 @@ function update(el, newProperties) {
     for (let attr in el.dataset) {
         // data-on-* attributes
         if (attr.startsWith("on")) {
-            let eventName = camelToKebab(attr.replace("on", ""));
-            el.setAttribute("on" + eventName, "evalContext(this.dataset." + attr + ", getContext(this))");
+            //let eventName = camelToKebab(attr.replace("on", ""));
+            let eventName = attr.replace("on", "").toLowerCase();
+            el.removeEventListener(eventName, onEvent);
+            el.addEventListener(eventName, onEvent);
         }
 
         // data-bind-* attributes
         if (attr.startsWith("bind") && attr != "bind") {
             let bindingAttr = camelToKebab(attr.replace("bind", ""));
-            el.setAttribute(bindingAttr, evalContext(el.dataset[attr], context));
+            el.setAttribute(bindingAttr, evalExpression(el.dataset[attr], el));
         }
     }
 
@@ -86,15 +87,15 @@ function update(el, newProperties) {
         if (el.dataset.forContent == undefined)
             el.dataset.forContent = el.innerHTML;
         el.innerHTML = "";
-        evalContext(el.dataset.forInit, context);
+        evalExpression(el.dataset.forInit, el);
         let updatedCount = 0;
-        for (let index = 0; evalContext(el.dataset.forTest, context); index++) {
+        for (let index = 0; evalExpression(el.dataset.forTest, el); index++) {
             el.insertAdjacentHTML("beforeend", el.dataset.forContent);
             while (updatedCount < el.children.length) {
                 //el.children[updatedCount].dataset.varIndex = index;
                 update(el.children[updatedCount++]);
             }
-            evalContext(el.dataset.forNext, context);
+            evalExpression(el.dataset.forNext, el);
         }
         updateChildren = false;
     }
@@ -106,7 +107,7 @@ function update(el, newProperties) {
             el.dataset.forContent = el.innerHTML;
         el.innerHTML = "";
         let updatedCount = 0;
-        let array = evalContext(el.dataset.forIn, context);
+        let array = evalExpression(el.dataset.forIn, el);
         for (const [index, item] of array.entries()) {
             el.insertAdjacentHTML("beforeend", el.dataset.forContent);
             while (updatedCount < el.children.length) {
@@ -123,7 +124,7 @@ function update(el, newProperties) {
 
     // data-html attribute
     if (el.dataset.html) {
-        setInnerHTML(el, evalContext(el.dataset["html"], context));
+        setInnerHTML(el, evalExpression(el.dataset.html, el));
     }
 
     // Update children
@@ -148,7 +149,7 @@ function updateAfterIf(el, condition, context) {
     // data-elif attribute
     if (el.nextElementSibling?.dataset?.elif != undefined) {
         if (!condition) {
-            let condition = evalContext(el.nextElementSibling.dataset.elif, context);
+            let condition = evalExpression(el.nextElementSibling.dataset.elif, el);
             showHide(el.nextElementSibling, condition);
             updateAfterIf(el.nextElementSibling, condition, context);
         } else {
@@ -162,8 +163,13 @@ function updateAfterIf(el, condition, context) {
     }
 }
 
-function onInput(el, prop) {
-    evalContext(prop + " = el.type == 'checkbox' ? el.checked : ['INPUT','SELECT'].includes(el.tagName) ? el.value : el.innerText", getContext(el), { el });
+function onModelInput(event) {
+    evalExpression(event.target.dataset.model + " = this.type == 'checkbox' ? this.checked : ['INPUT','SELECT','TEXTAREA'].includes(this.tagName) ? this.value : this.innerText", event.target);
+}
+
+function onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .capture, .passive
+    var expression = event.target.dataset["on" + event.type.charAt(0).toUpperCase() + event.type.slice(1)];
+    evalExpression(expression, event.target);
 }
 
 function showHide(el, showCondition) {
@@ -177,16 +183,9 @@ function updateProp(prop) {
         update(el);
 }
 
-function evalContext(js, context, args = {}) {
-    try {
-        //return eval("with (context) {" + js + "}");
-        /*return Function(...Object.keys(context), ...Object.keys(args), "return " + js)
-            .call(context, ...Object.values(context), ...Object.values(args));*/
-        return Function(...Object.keys(args), "return " + js)
-            .call(context, ...Object.values(args));
-    } catch (e) {
-        throw `${e.name} : ${e.message}\n\t${js}`;
-    }
+function evalExpression(js, element) {
+    return new Function("_context", "with (_context) { return " + js + " }")
+        .call(element, getContext(element));
 }
 
 function findUpdatesName(context, props) {
@@ -215,7 +214,7 @@ function findUpdateName(context, prop) {
 }
 
 const target = Symbol("target");
-function Properties(obj = {}, parent = "this") {
+function Properties(obj = {}, parent = null) {
     for (key in obj) {
         if (obj[key][target])
             obj[key] = new Properties(obj[key][target], parent ? parent + "." + key : key);
@@ -287,6 +286,9 @@ function Context(parentContext) {
                 enumerable: true,
                 configurable: true
             };
+        },
+        has(obj, key) {
+            return key in obj || key in ctx[context];
         }
     });
     ctx[context] = parentContext;

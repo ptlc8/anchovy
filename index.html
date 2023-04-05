@@ -15,14 +15,14 @@
     <body>
         <header>
             <img class="logo" src="icon.png" />
-            <h1 data-model="this.title">anchovy.js</h1>
+            <h1 data-model="title">anchovy.js</h1>
         </header>
         
         <section>
             <h2>What is anchovy.js?</h2>
             <p>
                 anchovy.js is a small JavaScript library that allows you to create dynamic web pages.
-                It is inspired by the <a href="https://vuejs.org/">Vue.js</a> framework.
+                It is inspired by the <a href="https://vuejs.org/">Vue.js</a> framework and the <a href="https://batmanjs.org/">Batman.js</a> library.
             </p>
         </section>
         <section>
@@ -50,13 +50,13 @@
                 }
             </script>
             <div class="examples">
-                <div class="list" data-for-each="e" data-for-in="this.examples">
-                    <button data-bind="this.e.name" data-on-click="loadExample(this.e);"></button>
+                <div class="list" data-for-each="e" data-for-in="examples">
+                    <button data-bind="e.name" data-on-click="loadExample(e);"></button>
                 </div>
-                <div class="view" data-bind-data-view="this.example?.url || ''" data-update="this.example">
+                <div class="view" data-bind-data-view="example?.url || ''" data-update="example">
                     
                 </div>
-                <textarea class="code" disabled data-bind="this.exampleHTML" data-update="this.exampleHTML"></textarea>
+                <textarea class="code" disabled data-bind="exampleHTML" data-update="exampleHTML"></textarea>
             </div>
         </section>
         <section>

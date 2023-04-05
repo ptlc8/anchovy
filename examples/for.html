@@ -3,20 +3,20 @@
 <h3>Array : data-for-each</h3>
 
 <ol data-for-each="prof" data-for-in="['Boumiz','Abo','Guezguez']">
-    <li data-bind="this.prof"></li>
+    <li data-bind="prof"></li>
 </ol>
 
 <h3>Counter : data-for-test</h3>
 
-<ul data-for-init="this.i=1" data-for-test="this.i<=3" data-for-next="this.i++">
+<ul data-for-init="i=1" data-for-test="i<=3" data-for-next="i++">
     <li>
-        <span data-bind="this.i"></span>
-        <sup data-if="this.i==1">st</sup>
-        <sup data-elif="this.i==2">nd</sup>
+        <span data-bind="i"></span>
+        <sup data-if="i==1">st</sup>
+        <sup data-elif="i==2">nd</sup>
         <sup data-else>rd</sup>
         element
     </li>
     <li>
-        <span data-bind="this.i+0.5"></span><sup>th</sup> element
+        <span data-bind="i+0.5"></span><sup>th</sup> element
     </li>
 </ul>
