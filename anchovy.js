@@ -61,7 +61,7 @@ function update(el, newProperties) {
             el[el.type == "checkbox" ? "checked" : "value"] = value;
         } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
             el.value = value;
-        } else if (el.innerText != value)
+        } else if (el.innerText !== value)
             el.innerText = value;
     }
 
@@ -81,21 +81,25 @@ function update(el, newProperties) {
         }
     }
 
-    // data-for-test attribute
-    if (el.dataset.forTest) {
+    // data-repeat attribute
+    if (el.dataset.repeat) {
         // if first run
-        if (el.dataset.forContent == undefined)
-            el.dataset.forContent = el.innerHTML;
-        el.innerHTML = "";
-        evalExpression(el.dataset.forInit, el);
-        let updatedCount = 0;
-        for (let index = 0; evalExpression(el.dataset.forTest, el); index++) {
-            el.insertAdjacentHTML("beforeend", el.dataset.forContent);
-            while (updatedCount < el.children.length) {
-                //el.children[updatedCount].dataset.varIndex = index;
-                update(el.children[updatedCount++]);
-            }
-            evalExpression(el.dataset.forNext, el);
+        if (el.dataset.repeatContent == undefined) {
+            el.dataset.repeatContent = el.innerHTML;
+            el.innerHTML = "";
+        }
+        let repeat = evalExpression(el.dataset.repeat, el);
+        if (repeat > el.children.length) {
+            let last = el.children.length;
+            for (let i = last; i < repeat; i++)
+                el.insertAdjacentHTML("beforeend", el.dataset.repeatContent);
+            for (let i = last; i < repeat; i++)
+                update(el.children[i], {
+                    [el.dataset.repeatIndex]: i,
+                });
+        } else {
+            for (let i = repeat; i < el.children.length; i++)
+                el.children[i].remove();
         }
         updateChildren = false;
     }

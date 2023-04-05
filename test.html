@@ -42,8 +42,8 @@
         <li data-bind="prof"></li>
     </ol>
 
-    <h3>Counter : -for-test</h3>
-    <ul data-for-init="i=1" data-for-test="i<=3" data-for-next="i++">
+    <h3>Counter : -repeat</h3>
+    <ul data-repeat="3" data-repeat-index="i">
         <li>
             <span data-bind="i"></span><sup data-if="i==1">st</sup><sup data-elif="i==2">nd</sup><sup
                 data-else>rd</sup> element
@@ -60,5 +60,5 @@
     <hr />
 
     <h2>-view</h2>
-    <div data-view="question.view.html"></div>
+    <div data-view="examples/question.html"></div>
 </body>
