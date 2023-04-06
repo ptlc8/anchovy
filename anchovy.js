@@ -63,8 +63,8 @@ function update(el) {
     // data-if attribute
     if (el.dataset.if) {
         let condition = evalExpression(el.dataset.if, el);
-        showHide(el, condition);
-        updateAfterIf(el, condition, context);
+        showHide(el, condition, el.dataset.transition, el.dataset.transitionTime);
+        updateAfterIf(el, condition, context, el.dataset.transition, el.dataset.transitionTime);
     }
 
     // data-bind attribute
@@ -168,21 +168,21 @@ function update(el) {
     clean();
 }
 
-function updateAfterIf(el, condition, context) {
+function updateAfterIf(el, condition, context, transition=null, transitionTime=null) {
     // data-elif attribute
     if (el.nextElementSibling?.dataset?.elif != undefined) {
         if (!condition) {
             let condition = evalExpression(el.nextElementSibling.dataset.elif, el);
-            showHide(el.nextElementSibling, condition);
-            updateAfterIf(el.nextElementSibling, condition, context);
+            showHide(el.nextElementSibling, condition, transition, transitionTime);
+            updateAfterIf(el.nextElementSibling, condition, context, transition, transitionTime);
         } else {
-            showHide(el.nextElementSibling, false);
-            updateAfterIf(el.nextElementSibling, true, context);
+            showHide(el.nextElementSibling, false, transition, transitionTime);
+            updateAfterIf(el.nextElementSibling, true, context, transition, transitionTime);
         }
     }
     // data-else attribute
     else if (el.nextElementSibling?.dataset?.else != undefined) {
-        showHide(el.nextElementSibling, !condition);
+        showHide(el.nextElementSibling, !condition, transition, transitionTime);
     }
 }
 
@@ -195,8 +195,18 @@ function onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .
     evalExpression(expression, event.target);
 }
 
-function showHide(el, showCondition) {
-    el.style.display = showCondition ? "" : "none";
+function showHide(el, showCondition, transition=null, time=500) {
+    if (!("settled" in el.dataset)) {
+        el.style.display = showCondition ? "" : "none";
+        el.dataset.settled = true;
+    } else if (transition == "fade") {
+        el.style.transition = "opacity 0." + time / 2 + "s";
+        el.style.opacity = 0;
+        setTimeout(() => el.style.display = showCondition ? "" : "none", time / 2);
+        if (showCondition) setTimeout(() => el.style.opacity = 1, time);
+    } else {
+        el.style.display = showCondition ? "" : "none";
+    }
 }
 
 function updateProp(prop) {

@@ -1,0 +1,10 @@
+<script>
+    properties.display = true;
+</script>
+
+<button data-on-click="display = !display">toggle</button>
+<br/>
+
+<img src="icon.png" width="200" data-if="display" data-update="display" data-transition="fade" data-transition-time="500" />
+
+<i data-else>it disappeared</i>
