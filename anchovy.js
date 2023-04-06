@@ -1,30 +1,43 @@
 const properties = new Properties({});
 
 window.addEventListener("load", function () {
-    update(document.children[0]);
+    update(document.documentElement);
 });
 
 const register = {};
 const contexts = new Map();
 
 
+// return the context of the element
 function getContext(el) {
-    if (el == document.children[0])
+    if (el == document.documentElement)
         return properties;
-    if (contexts.get(el))
-        return contexts.get(el);
-    var context = new Context(getContext(el.parentElement));
-    contexts.set(el, context);
-    return context;
+    return contexts.get(el) || getContext(el.parentElement);
 }
 
-function update(el, newProperties) {
-    var context = getContext(el);
-    for (let key in newProperties) {
-        context[variables].push(key);
-        context[key] = newProperties[key];
-    }
+// 
+function updateContext(el, data, equivalents) {
+    if (!contexts.has(el))
+        contexts.set(el, new Context(el));
+    for (let k in data)
+        contexts.get(el)[Context.put](k, data[k]);
+    for (let k in equivalents)
+        contexts.get(el)[Context.setEq](k, equivalents[k]);
+}
 
+// remove lost contexts and lost register entries (of removed elements)
+function clean() {
+    for (let el of contexts.keys())
+        if (!document.contains(el))
+            contexts.delete(el);
+    for (let updateName in register)
+        for (let el of register[updateName])
+            if (!document.contains(el))
+                register[updateName].delete(el);
+}
+
+function update(el) {
+    var context = getContext(el);
     var updateChildren = true;
 
     // data-model
@@ -93,10 +106,12 @@ function update(el, newProperties) {
             let last = el.children.length;
             for (let i = last; i < repeat; i++)
                 el.insertAdjacentHTML("beforeend", el.dataset.repeatContent);
-            for (let i = last; i < repeat; i++)
-                update(el.children[i], {
+            for (let i = last; i < repeat; i++) {
+                updateContext(el.children[i], {
                     [el.dataset.repeatIndex]: i,
                 });
+                update(el.children[i]);
+            }
         } else {
             for (let i = repeat; i < el.children.length; i++)
                 el.children[i].remove();
@@ -115,12 +130,14 @@ function update(el, newProperties) {
         for (const [index, item] of array.entries()) {
             el.insertAdjacentHTML("beforeend", el.dataset.forContent);
             while (updatedCount < el.children.length) {
-                //el.children[updatedCount].dataset.varIndex = index;
-                update(el.children[updatedCount++],
-                    {
-                        [el.dataset.forEach]: item, [el.dataset.forIndex]: index,
-                        ["_eq_" + el.dataset.forEach]: el.dataset.forIn + "." + index, ["_eq_" + el.dataset.forIndex]: el.dataset.forIn + "." + index
-                    });
+                updateContext(el.children[updatedCount], {
+                    [el.dataset.forEach]: item,
+                    [el.dataset.forIndex]: index
+                }, {
+                    [el.dataset.forEach]: el.dataset.forIn + "." + index
+                });
+                update(el.children[updatedCount]);
+                updatedCount++
             }
         }
         updateChildren = false;
@@ -147,6 +164,8 @@ function update(el, newProperties) {
                 }
             });
     }
+
+    clean();
 }
 
 function updateAfterIf(el, condition, context) {
@@ -201,33 +220,32 @@ function findUpdateName(context, prop) {
         prop = path[0];
         var found = true;
         for (let i = 1; i < path.length; i++) {
-            if (context["_eq_" + prop]) {
-                prop = context["_eq_" + prop];
+            if (context[Context.getEq] && context[Context.getEq](prop)) {
+                prop = context[Context.getEq](prop);
                 found = false;
             }
             prop += "." + path[i];
         }
-        if (context["_eq_" + prop]) {
-            prop = context["_eq_" + prop];
+        if (context[Context.getEq] && context[Context.getEq](prop)) {
+            prop = context[Context.getEq](prop);
             found = false;
         }
     } while (!found);
     return prop;
 }
 
-const target = Symbol("target");
 function Properties(obj = {}, parent = null) {
     for (key in obj) {
-        if (obj[key][target])
-            obj[key] = new Properties(obj[key][target], parent ? parent + "." + key : key);
+        if (obj[key][Properties.target])
+            obj[key] = new Properties(obj[key][Properties.target], parent ? parent + "." + key : key);
         else if (obj[key] instanceof Object)
             obj[key] = new Properties(obj[key], parent ? parent + "." + key : key);
     }
     return new Proxy(obj, {
         set(obj, prop, value) {
             if (obj[prop] !== value) {
-                var updateLength = obj instanceof Array && prop.match(/^[0-9]+$/) && parseInt(prop)+1 > obj.length;
-                obj[prop] = value[target] ? new Properties(value[target], parent ? parent + "." + prop : prop)
+                var updateLength = obj instanceof Array && prop.match(/^[0-9]+$/) && parseInt(prop) >= obj.length;
+                obj[prop] = value[Properties.target] ? new Properties(value[Properties.target], parent ? parent + "." + prop : prop)
                     : value instanceof Object ? new Properties(value, parent ? parent + "." + prop : prop)
                         : value;
                 if (updateLength) updateProp(parent ? parent + ".length" : "length");
@@ -236,12 +254,13 @@ function Properties(obj = {}, parent = null) {
             return true;
         },
         get(obj, prop) {
-            if (prop == target)
+            if (prop == Properties.target)
                 return obj;
             return obj[prop]
         }
     });
 }
+Properties.target = Symbol("target");
 
 function camelToKebab(str) {
     return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
@@ -258,56 +277,42 @@ function setInnerHTML(el, html) {
     });
 }
 
-const context = Symbol("context");
-const variables = Symbol("variables");
-const olds = Symbol("olds");
-const hasChanged = Symbol("hasChanged");
-const updateSymbol = Symbol("update");
-const equivalentsSymbol = Symbol("quivalents");
-function Context(parentContext) {
-    var ctx = new Proxy({}, {
+function Context(el) {
+    var obj = {};
+    var equivalents = {};
+    var ctx = new Proxy(obj, {
         set(obj, prop, value) {
-            if ([context, variables, olds, hasChanged, updateSymbol, equivalentsSymbol].includes(prop) || ctx[variables].includes(prop)) {
+            if ([Context.setEq, Context.put, Context.getEq].includes(prop) || prop in obj) {
                 obj[prop] = value;
             } else {
-                ctx[context][prop] = value;
+                getContext(el.parentElement)[prop] = value;
             }
         },
         get(obj, prop, receiver) {
-            if ([context, variables, olds, hasChanged, updateSymbol, equivalentsSymbol].includes(prop) || ctx[variables].includes(prop)) {
+            if ([Context.setEq, Context.put, Context.getEq].includes(prop) || prop in obj) {
                 return obj[prop];
             } else {
-                return ctx[context][prop];
+                return getContext(el.parentElement)[prop];
             }
         },
         ownKeys(obj) {
-            return Object.keys(obj).concat(Object.keys(ctx[context]));
-        },
-        getOwnPropertyDescriptor(obj, prop) {
-            return {
-                enumerable: true,
-                configurable: true
-            };
+            return Object.keys(obj).concat(Object.keys(getContext(el.parentElement)));
         },
         has(obj, key) {
-            return key in obj || key in ctx[context];
+            return key in obj || key in getContext(el.parentElement);
         }
     });
-    ctx[context] = parentContext;
-    ctx[variables] = [];
-    ctx[olds] = null;
-    ctx[hasChanged] = function () {
-        if (ctx[olds] == null) return true;
-        for (let key in ctx[variables])
-            if (ctx[variables][key] != ctx[olds][key])
-                return true;
-        return false;
+    ctx[Context.put] = function (prop, value) {
+        obj[prop] = value;
+    }
+    ctx[Context.setEq] = function (prop, equivalent) {
+        equivalents[prop] = equivalent;
     };
-    ctx[updateSymbol] = function () {
-        ctx[olds] = [];
-        for (let key in ctx[variables])
-            ctx[olds][key] = ctx[variables][key];
+    ctx[Context.getEq] = function (prop) {
+        return equivalents[prop];
     };
-    ctx[equivalentsSymbol] = {};
     return ctx;
 }
+Context.setEq = Symbol("setEquivalent");
+Context.getEq = Symbol("getEquivalent");
+Context.put = Symbol("put");
