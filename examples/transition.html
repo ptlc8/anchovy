@@ -1,10 +1,33 @@
 <script>
+    properties.n = 10;
     properties.display = true;
 </script>
+
+<input type="range" min="1" max="20" data-model="n" data-update="n" />
+
+<div data-repeat="n" data-update="n" data-transition="custom" data-transition-time="1000">
+    <span>▦</span>
+</div>
+<br/>
 
 <button data-on-click="display = !display">toggle</button>
 <br/>
 
-<img src="icon.png" width="200" data-if="display" data-update="display" data-transition="fade" data-transition-time="500" />
+<img src="icon.png" width="200" data-if="display" data-update="display" data-transition data-transition-time="500" />
 
 <i data-else>it disappeared</i>
+
+<style>
+    .custom-enter-active, .custom-leave-active {
+        display: inline-block;
+        transition: opacity 1s, transform 1s;
+    }
+    .custom-enter-to, .custom-leave {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    .custom-enter, .custom-leave-to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+</style>

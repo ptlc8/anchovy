@@ -111,10 +111,12 @@ function update(el) {
                     [el.dataset.repeatIndex]: i,
                 });
                 update(el.children[i]);
+                enterTransition(el.children[i], el.dataset.transition, el.dataset.transitionTime)
             }
         } else {
             for (let i = repeat; i < el.children.length; i++)
-                el.children[i].remove();
+                leaveTransition(el.children[i], el.dataset.transition, el.dataset.transitionTime)
+                    .then(child => child.remove());
         }
         updateChildren = false;
     }
@@ -196,17 +198,58 @@ function onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .
 }
 
 function showHide(el, showCondition, transition=null, time=500) {
-    if (!("settled" in el.dataset)) {
-        el.style.display = showCondition ? "" : "none";
-        el.dataset.settled = true;
-    } else if (transition == "fade") {
-        el.style.transition = "opacity 0." + time / 2 + "s";
-        el.style.opacity = 0;
-        setTimeout(() => el.style.display = showCondition ? "" : "none", time / 2);
-        if (showCondition) setTimeout(() => el.style.opacity = 1, time);
-    } else {
-        el.style.display = showCondition ? "" : "none";
-    }
+    if (showCondition)
+        enterTransition(el, transition, time).then(() => el.style.display = "");
+    else
+        leaveTransition(el, transition, time).then(() => el.style.display = "none");
+}
+
+// remove element with transition
+function leaveTransition(el, transition=null, time=500) {
+    return new Promise(resolve => {
+        if (transition === null) return resolve(el);
+        if (transition == "") {
+            el.style.transition = "opacity 0." + time / 2 + "s";
+            el.style.opacity = 0;
+            setTimeout(() => resolve(el), time/2);
+        } else {
+            el.classList.add(transition + "-leave");
+            el.offsetHeight; // force reflow css
+            el.classList.add(transition + "-leave-active");
+            el.classList.remove(transition + "-leave");
+            el.classList.add(transition + "-leave-to");
+            setTimeout(() => {
+                el.classList.remove(transition + "-leave-to");
+                el.classList.remove(transition + "-leave-active");
+                resolve(el);
+            }, time);
+        }
+    });
+}
+
+// add element with transition
+function enterTransition(el, transition=null, time=500) {
+    return new Promise(resolve => {
+        if (transition === null) return resolve(el);
+        if (transition == "") {
+            el.style.opacity = 0;
+            el.style.transition = "opacity 0." + time / 2 + "s";
+            el.offsetHeight; // force reflow css
+            el.style.opacity = 1;
+            setTimeout(() => resolve(el), time);
+        } else {
+            el.classList.add(transition + "-enter");
+            el.offsetHeight; // force reflow css
+            el.classList.add(transition + "-enter-active");
+            el.classList.remove(transition + "-enter");
+            el.classList.add(transition + "-enter-to");
+            setTimeout(() => {
+                el.classList.remove(transition + "-enter-to");
+                el.classList.remove(transition + "-enter-active");
+                resolve(el);
+            }, time);
+        }
+    });
 }
 
 function updateProp(prop) {
