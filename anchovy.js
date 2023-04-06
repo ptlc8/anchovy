@@ -119,7 +119,7 @@ function update(el, newProperties) {
                 update(el.children[updatedCount++],
                     {
                         [el.dataset.forEach]: item, [el.dataset.forIndex]: index,
-                        ["_eq_this." + el.dataset.forEach]: el.dataset.forIn + "." + index, ["_eq_this." + el.dataset.forIndex]: el.dataset.forIn + "." + index
+                        ["_eq_" + el.dataset.forEach]: el.dataset.forIn + "." + index, ["_eq_" + el.dataset.forIndex]: el.dataset.forIn + "." + index
                     });
             }
         }
@@ -181,8 +181,7 @@ function showHide(el, showCondition) {
 }
 
 function updateProp(prop) {
-    //prop = prop.match(/^this\.[^\.]+|^[^\.]+/); // TMP
-    console.log("Update: " + prop);
+    //console.log("Update: " + prop);
     for (let el of register[prop] || [])
         update(el);
 }
@@ -197,24 +196,23 @@ function findUpdatesName(context, props) {
 }
 
 function findUpdateName(context, prop) {
-    var bind = prop;
     do {
-        prop = bind.split(".");
-        var bind = prop[0];
+        var path = prop.split(".");
+        prop = path[0];
         var found = true;
-        for (let i = 1; i < prop.length; i++) {
-            if (context["_eq_" + bind]) {
-                bind = context["_eq_" + bind];
+        for (let i = 1; i < path.length; i++) {
+            if (context["_eq_" + prop]) {
+                prop = context["_eq_" + prop];
                 found = false;
             }
-            bind += "." + prop[i];
+            prop += "." + path[i];
         }
-        if (context["_eq_" + bind]) {
-            bind = context["_eq_" + bind];
+        if (context["_eq_" + prop]) {
+            prop = context["_eq_" + prop];
             found = false;
         }
     } while (!found);
-    return bind;
+    return prop;
 }
 
 const target = Symbol("target");
