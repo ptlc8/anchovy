@@ -298,9 +298,10 @@ function Properties(obj = {}, parent = null) {
         set(obj, prop, value) {
             if (obj[prop] !== value) {
                 var updateLength = obj instanceof Array && prop.match(/^[0-9]+$/) && parseInt(prop) >= obj.length;
-                obj[prop] = value[Properties.target] ? new Properties(value[Properties.target], parent ? parent + "." + prop : prop)
-                    : value instanceof Object ? new Properties(value, parent ? parent + "." + prop : prop)
-                        : value;
+                obj[prop] = value===undefined || value===null ? value
+                    : value[Properties.target] ? new Properties(value[Properties.target], parent ? parent + "." + prop : prop)
+                        : value instanceof Object ? new Properties(value, parent ? parent + "." + prop : prop)
+                            : value;
                 if (updateLength) updateProp(parent ? parent + ".length" : "length");
                 updateProp(parent ? parent + "." + prop : prop);
             }
