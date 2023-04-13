@@ -67,6 +67,10 @@ function update(el) {
         updateAfterIf(el, condition, context, el.dataset.transition, el.dataset.transitionTime);
     }
 
+    // data-ignore attribute
+    if ("ignore" in el.dataset)
+        return;
+
     // data-bind attribute
     if (el.dataset.bind) {
         let value = evalExpression(el.dataset.bind, el);
@@ -102,8 +106,9 @@ function update(el) {
             el.innerHTML = "";
         }
         let repeat = evalExpression(el.dataset.repeat, el);
-        if (repeat > el.children.length) {
-            let last = el.children.length;
+        let last = Array.from(el.children).filter(el => !("ignore" in el.dataset)).length;
+        console.log(last, el.children.length);
+        if (repeat > last) {
             for (let i = last; i < repeat; i++)
                 el.insertAdjacentHTML("beforeend", el.dataset.repeatContent);
             for (let i = last; i < repeat; i++) {
@@ -114,9 +119,11 @@ function update(el) {
                 enterTransition(el.children[i], el.dataset.transition, el.dataset.transitionTime)
             }
         } else {
-            for (let i = repeat; i < el.children.length; i++)
+            for (let i = repeat; i < last; i++) {
+                el.children[i].dataset.ignore = "";
                 leaveTransition(el.children[i], el.dataset.transition, el.dataset.transitionTime)
                     .then(child => child.remove());
+            }
         }
         updateChildren = false;
     }
@@ -129,6 +136,9 @@ function update(el) {
         el.innerHTML = "";
         let updatedCount = 0;
         let array = evalExpression(el.dataset.forIn, el);
+        if (!array || typeof array.entries !== "function") {
+            console.error("`" + el.dataset.forIn + "` is not iterable", array);
+        }
         for (const [index, item] of array.entries()) {
             el.insertAdjacentHTML("beforeend", el.dataset.forContent);
             while (updatedCount < el.children.length) {
@@ -170,10 +180,10 @@ function update(el) {
     clean();
 }
 
-function updateAfterIf(el, condition, context, transition=null, transitionTime=null) {
+function updateAfterIf(el, ifCondition, context, transition=null, transitionTime=null) {
     // data-elif attribute
     if (el.nextElementSibling?.dataset?.elif != undefined) {
-        if (!condition) {
+        if (!ifCondition) {
             let condition = evalExpression(el.nextElementSibling.dataset.elif, el);
             showHide(el.nextElementSibling, condition, transition, transitionTime);
             updateAfterIf(el.nextElementSibling, condition, context, transition, transitionTime);
@@ -184,7 +194,7 @@ function updateAfterIf(el, condition, context, transition=null, transitionTime=n
     }
     // data-else attribute
     else if (el.nextElementSibling?.dataset?.else != undefined) {
-        showHide(el.nextElementSibling, !condition, transition, transitionTime);
+        showHide(el.nextElementSibling, !ifCondition, transition, transitionTime);
     }
 }
 
@@ -198,10 +208,13 @@ function onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .
 }
 
 function showHide(el, showCondition, transition=null, time=500) {
-    if (showCondition)
+    if (showCondition) {
         enterTransition(el, transition, time).then(() => el.style.display = "");
-    else
+        delete el.dataset.ignore;
+    } else {
         leaveTransition(el, transition, time).then(() => el.style.display = "none");
+        el.dataset.ignore = "";
+    }
 }
 
 // remove element with transition
@@ -289,6 +302,7 @@ function findUpdateName(context, prop) {
 
 function Properties(obj = {}, parent = null) {
     for (key in obj) {
+        if (obj[key] === null || obj[key] === undefined) continue;
         if (obj[key][Properties.target])
             obj[key] = new Properties(obj[key][Properties.target], parent ? parent + "." + key : key);
         else if (obj[key] instanceof Object)
@@ -296,7 +310,7 @@ function Properties(obj = {}, parent = null) {
     }
     return new Proxy(obj, {
         set(obj, prop, value) {
-            if (obj[prop] !== value) {
+            if (obj[prop] !== value || !(prop in obj)) {
                 var updateLength = obj instanceof Array && prop.match(/^[0-9]+$/) && parseInt(prop) >= obj.length;
                 obj[prop] = value===undefined || value===null ? value
                     : value[Properties.target] ? new Properties(value[Properties.target], parent ? parent + "." + prop : prop)
