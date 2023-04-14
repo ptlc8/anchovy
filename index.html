@@ -51,7 +51,7 @@
                 }
             </script>
             <div class="examples">
-                <div class="list" data-for-each="e" data-for-in="examples">
+                <div class="list" data-foreach-e="examples">
                     <button data-bind="e.name" data-on-click="loadExample(e);"></button>
                 </div>
                 <div class="view" data-bind-data-view="example?.url || ''" data-update="example">

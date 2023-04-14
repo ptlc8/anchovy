@@ -9,11 +9,11 @@
 </script>
 
 <h1>Todo list</h1>
-<ul data-for-each="task" data-for-index="index" data-for-in="tasks" data-update="tasks.length|tasks">
+<ul data-foreach-task="tasks" data-index="index" data-update="tasks.length|tasks" data-transition>
     <li>
         <input type="checkbox" data-model="task.striked" />
         <span contenteditable data-model="task.text" data-bind-class="'task'+(task.striked?' completed':'')" data-update="task.striked"></span>
-        <button data-on-click="tasks.splice(tasks.indexOf(task),1);">Delete</button>
+        <button data-on-click="tasks.splice(index,1)">Delete</button>
     </li>
 </ul>
 <span data-bind-style="tasks.length>5?'color:red':''" data-update="tasks.length">

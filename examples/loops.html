@@ -1,12 +1,12 @@
-<h3>data-for-each</h3>
+<h3>data-foreach-*</h3>
 
-<ol data-for-each="prof" data-for-in="['Boumiz','Abo','Guezguez']">
+<ol data-foreach-prof="['Boumiz','Abo','Guezguez']">
     <li data-bind="prof"></li>
 </ol>
 
 <h3>data-repeat</h3>
 
-<ul data-repeat="8" data-repeat-index="i">
+<ul data-repeat="8" data-index="i">
     <li>
         <span data-bind="i"></span>
         <sup data-if="i % 10 == 1">st</sup>

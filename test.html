@@ -37,13 +37,13 @@
     <hr />
 
     <h2>-for</h2>
-    <h3>Array : -for-each</h3>
-    <ol data-for-each="prof" data-for-in="['Boumiz','Abo','Guezguez']">
+    <h3>Array : -foreach-*</h3>
+    <ol data-foreach-prof="['Boumiz','Abo','Guezguez']">
         <li data-bind="prof"></li>
     </ol>
 
     <h3>Counter : -repeat</h3>
-    <ul data-repeat="3" data-repeat-index="i">
+    <ul data-repeat="3" data-index="i">
         <li>
             <span data-bind="i"></span><sup data-if="i==1">st</sup><sup data-elif="i==2">nd</sup><sup
                 data-else>rd</sup> element

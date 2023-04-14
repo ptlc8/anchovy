@@ -96,60 +96,91 @@ function update(el) {
             let bindingAttr = camelToKebab(attr.replace("bind", ""));
             el.setAttribute(bindingAttr, evalExpression(el.dataset[attr], el));
         }
+
+        // data-foreach-* attribute
+        if (attr.startsWith("foreach")) {
+            let iVar = attr.replace("foreach", "").charAt(0).toLowerCase() + attr.replace("foreach", "").slice(1);
+            // if first run
+            if (el.dataset.content == undefined) {
+                el.dataset.content = el.innerHTML;
+                el.innerHTML = "";
+            }
+            let array = evalExpression(el.dataset[attr], el);
+            if (!array || typeof array.entries !== "function") {
+                console.error("`" + el.dataset[attr] + "` is not iterable", array);
+            }
+            let children = getChildren(el);
+            let arrayElements = [];
+            exploreChildren: for (let child of children) {
+                let item = evalExpression(iVar, child);
+                for (let [i, value] of array.entries()) {
+                    if (item[Properties.target] === value[Properties.target]) {
+                        arrayElements[i] = child;
+                        continue exploreChildren;
+                    }
+                }
+                // remove child
+                child.dataset.ignore = "";
+                leaveTransition(child, el.dataset.transition, el.dataset.transitionTime)
+                .then(() => child.remove());
+            }
+            for (let i = 0; i < array.length; i++) {
+                children = getChildren(el);
+                if (arrayElements[i]) {
+                    // updating existing elements
+                    updateContext(children[i], {
+                        [el.dataset.index]: i
+                    }, {
+                        [iVar]: el.dataset[attr] + "." + i
+                    });
+                    update(children[i]);
+                } else {
+                    // adding new elements
+                    if (i == 0) el.insertAdjacentHTML("afterbegin", el.dataset.content);
+                    else children[i-1].insertAdjacentHTML("afterend", el.dataset.content);
+                    let newChild = i==0 ? el.firstElementChild : children[i-1].nextElementSibling;
+                    updateContext(newChild, {
+                        [iVar]: array[i],
+                        [el.dataset.index]: i
+                    }, {
+                        [iVar]: el.dataset[attr] + "." + i
+                    });
+                    update(newChild);
+                    enterTransition(newChild, el.dataset.transition, el.dataset.transitionTime);
+                }
+            }
+            updateChildren = false;
+        }
     }
 
     // data-repeat attribute
     if (el.dataset.repeat) {
         // if first run
-        if (el.dataset.repeatContent == undefined) {
-            el.dataset.repeatContent = el.innerHTML;
+        if (el.dataset.content == undefined) {
+            el.dataset.content = el.innerHTML;
             el.innerHTML = "";
         }
         let repeat = evalExpression(el.dataset.repeat, el);
-        let last = Array.from(el.children).filter(el => !("ignore" in el.dataset)).length;
-        console.log(last, el.children.length);
+        let last = getChildren(el).length;
         if (repeat > last) {
+            // adding new elements
             for (let i = last; i < repeat; i++)
-                el.insertAdjacentHTML("beforeend", el.dataset.repeatContent);
+                el.insertAdjacentHTML("beforeend", el.dataset.content);
+            let children = getChildren(el);
             for (let i = last; i < repeat; i++) {
-                updateContext(el.children[i], {
-                    [el.dataset.repeatIndex]: i,
+                updateContext(children[i], {
+                    [el.dataset.index]: i,
                 });
-                update(el.children[i]);
-                enterTransition(el.children[i], el.dataset.transition, el.dataset.transitionTime)
+                update(children[i]);
+                enterTransition(children[i], el.dataset.transition, el.dataset.transitionTime)
             }
         } else {
+            // or removing excess elements
+            let children = getChildren(el);
             for (let i = repeat; i < last; i++) {
-                el.children[i].dataset.ignore = "";
-                leaveTransition(el.children[i], el.dataset.transition, el.dataset.transitionTime)
+                children[i].dataset.ignore = "";
+                leaveTransition(children[i], el.dataset.transition, el.dataset.transitionTime)
                     .then(child => child.remove());
-            }
-        }
-        updateChildren = false;
-    }
-
-    // data-for-each attribute
-    if (el.dataset.forEach && el.dataset.forIn) {
-        // if first run
-        if (el.dataset.forContent == undefined)
-            el.dataset.forContent = el.innerHTML;
-        el.innerHTML = "";
-        let updatedCount = 0;
-        let array = evalExpression(el.dataset.forIn, el);
-        if (!array || typeof array.entries !== "function") {
-            console.error("`" + el.dataset.forIn + "` is not iterable", array);
-        }
-        for (const [index, item] of array.entries()) {
-            el.insertAdjacentHTML("beforeend", el.dataset.forContent);
-            while (updatedCount < el.children.length) {
-                updateContext(el.children[updatedCount], {
-                    [el.dataset.forEach]: item,
-                    [el.dataset.forIndex]: index
-                }, {
-                    [el.dataset.forEach]: el.dataset.forIn + "." + index
-                });
-                update(el.children[updatedCount]);
-                updatedCount++
             }
         }
         updateChildren = false;
@@ -263,6 +294,10 @@ function enterTransition(el, transition=null, time=500) {
             }, time);
         }
     });
+}
+
+function getChildren(el) {
+    return Array.from(el.children).filter(child => !("ignore" in child.dataset));
 }
 
 function updateProp(prop) {
