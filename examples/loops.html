@@ -1,8 +1,17 @@
 <h3>data-foreach-*</h3>
 
-<ol data-foreach-prof="['Boumiz','Abo','Guezguez']">
+<ol data-foreach-prof="['Boumiz', 'Abo', 'Guezguez']">
     <li data-bind="prof"></li>
 </ol>
+
+<div data-foreach-value="{table: 5, chaise: 8, tabouret: 0}" data-index="key">
+    <span>
+        <span data-bind="key"></span>
+        =>
+        <span data-bind="value"></span>
+        ;
+    </span>
+</div>
 
 <h3>data-repeat</h3>
 

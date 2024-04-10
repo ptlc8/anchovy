@@ -106,16 +106,17 @@ function update(el) {
                 el.innerHTML = "";
             }
             let array = evalExpression(el.dataset[attr], el);
-            if (!array || typeof array.entries !== "function") {
-                console.error("`" + el.dataset[attr] + "` is not iterable", array);
+            if (!array || typeof array !== "object") {
+                console.error("`" + el.dataset[attr] + "` is not iterable nor an object", array);
             }
+            array = Object.entries(array);
             let children = getChildren(el);
             let arrayElements = [];
             exploreChildren: for (let child of children) {
                 let item = evalExpression(iVar, child);
-                for (let [i, value] of array.entries()) {
-                    if (item[Properties.target] === value[Properties.target]) {
-                        arrayElements[i] = child;
+                for (let entry of array) {
+                    if (item[Properties.target] === entry[1][Properties.target]) {
+                        arrayElements[entry[0]] = child;
                         continue exploreChildren;
                     }
                 }
@@ -129,9 +130,9 @@ function update(el) {
                 if (arrayElements[i]) {
                     // updating existing elements
                     updateContext(children[i], {
-                        [el.dataset.index]: i
+                        [el.dataset.index]: array[i][0],
                     }, {
-                        [iVar]: el.dataset[attr] + "." + i
+                        [iVar]: el.dataset[attr] + "." + array[i][0]
                     });
                     update(children[i]);
                 } else {
@@ -140,10 +141,10 @@ function update(el) {
                     else children[i-1].insertAdjacentHTML("afterend", el.dataset.content);
                     let newChild = i==0 ? el.firstElementChild : children[i-1].nextElementSibling;
                     updateContext(newChild, {
-                        [iVar]: array[i],
-                        [el.dataset.index]: i
+                        [iVar]: array[i][1],
+                        [el.dataset.index]: array[i][0]
                     }, {
-                        [iVar]: el.dataset[attr] + "." + i
+                        [iVar]: el.dataset[attr] + "." + array[i][0]
                     });
                     update(newChild);
                     enterTransition(newChild, el.dataset.transition, el.dataset.transitionTime);
