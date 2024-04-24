@@ -372,6 +372,7 @@ function camelToKebab(str) {
 
 function setInnerHTML(el, html) {
     el.innerHTML = html;
+    clean();
     Array.from(el.querySelectorAll("script")).forEach(oldScript => {
         const newScript = document.createElement("script");
         Array.from(oldScript.attributes)
