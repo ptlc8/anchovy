@@ -235,8 +235,8 @@ function onModelInput(event) {
 }
 
 function onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .capture, .passive
-    var expression = event.target.dataset["on" + event.type.charAt(0).toUpperCase() + event.type.slice(1)];
-    evalExpression(expression, event.target);
+    var expression = this.dataset["on" + event.type.charAt(0).toUpperCase() + event.type.slice(1)];
+    evalExpression(expression, this);
 }
 
 function showHide(el, showCondition, transition=null, time=500) {
