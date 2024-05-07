@@ -7,6 +7,51 @@ window.addEventListener("load", function () {
 const register = {};
 const contexts = new Map();
 
+/**
+ * Variables context for an HTML element
+ * @extends {Proxy}
+ */
+class Context {
+    static target = Symbol("target");
+    static equivalents = Symbol("equivalents");
+    constructor(el) {
+        /**
+         * Local context variables
+         * @type {Object}
+         */
+        this[Context.target] = this;
+        /**
+         * Equivalent properties names
+         * @type {Object<string, string>}
+         */
+        this[Context.equivalents] = {};
+        var ctx = new Proxy(this, {
+            set(obj, prop, value) {
+                if ([Context.target, Context.equivalents].includes(prop)) {
+                    throw new Error("Cannot set " + prop + " property");
+                } else if (prop in obj) {
+                    obj[prop] = value;
+                } else {
+                    getContext(el.parentElement)[prop] = value;
+                }
+            },
+            get(obj, prop, receiver) {
+                if ([Context.target, Context.equivalents].includes(prop) || prop in obj) {
+                    return obj[prop];
+                } else {
+                    return getContext(el.parentElement)[prop];
+                }
+            },
+            ownKeys(obj) {
+                return Object.keys(obj).concat(Object.keys(getContext(el.parentElement)));
+            },
+            has(obj, key) {
+                return key in obj || key in getContext(el.parentElement);
+            }
+        });
+        return ctx;
+    }
+}
 
 // return the context of the element
 function getContext(el) {
@@ -20,9 +65,9 @@ function updateContext(el, data, equivalents) {
     if (!contexts.has(el))
         contexts.set(el, new Context(el));
     for (let k in data)
-        contexts.get(el)[Context.put](k, data[k]);
+        contexts.get(el)[Context.target][k] = data[k];
     for (let k in equivalents)
-        contexts.get(el)[Context.setEq](k, equivalents[k]);
+        contexts.get(el)[Context.equivalents][k] = equivalents[k];
 }
 
 // remove lost contexts and lost register entries (of removed elements)
@@ -322,14 +367,14 @@ function findUpdateName(context, prop) {
         prop = path[0];
         var found = true;
         for (let i = 1; i < path.length; i++) {
-            if (context[Context.getEq] && context[Context.getEq](prop)) {
-                prop = context[Context.getEq](prop);
+            if (context[Context.equivalents] && prop in context[Context.equivalents]) {
+                prop = context[Context.equivalents][prop];
                 found = false;
             }
             prop += "." + path[i];
         }
-        if (context[Context.getEq] && context[Context.getEq](prop)) {
-            prop = context[Context.getEq](prop);
+        if (context[Context.equivalents] && prop in context[Context.equivalents]) {
+            prop = context[Context.equivalents][prop];
             found = false;
         }
     } while (!found);
@@ -381,43 +426,3 @@ function setInnerHTML(el, html) {
         oldScript.parentNode.replaceChild(newScript, oldScript);
     });
 }
-
-function Context(el) {
-    var obj = {};
-    var equivalents = {};
-    var ctx = new Proxy(obj, {
-        set(obj, prop, value) {
-            if ([Context.setEq, Context.put, Context.getEq].includes(prop) || prop in obj) {
-                obj[prop] = value;
-            } else {
-                getContext(el.parentElement)[prop] = value;
-            }
-        },
-        get(obj, prop, receiver) {
-            if ([Context.setEq, Context.put, Context.getEq].includes(prop) || prop in obj) {
-                return obj[prop];
-            } else {
-                return getContext(el.parentElement)[prop];
-            }
-        },
-        ownKeys(obj) {
-            return Object.keys(obj).concat(Object.keys(getContext(el.parentElement)));
-        },
-        has(obj, key) {
-            return key in obj || key in getContext(el.parentElement);
-        }
-    });
-    ctx[Context.put] = function (prop, value) {
-        obj[prop] = value;
-    }
-    ctx[Context.setEq] = function (prop, equivalent) {
-        equivalents[prop] = equivalent;
-    };
-    ctx[Context.getEq] = function (prop) {
-        return equivalents[prop];
-    };
-    return ctx;
-}
-Context.setEq = Symbol("setEquivalent");
-Context.getEq = Symbol("getEquivalent");
-Context.put = Symbol("put");
