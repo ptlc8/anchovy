@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-app="{ title: 'anchovy.js' + ' '.repeat(100) }">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,8 +8,7 @@
         <link rel="icon" href="icon.png" />
         <link rel="stylesheet" href="style.css" />
         <script>
-            properties.title = "anchovy.js" + " ".repeat(100);
-            setInterval(() => properties.title = properties.title.slice(-1) + properties.title.slice(0,-1), 100);
+            setInterval(() => app.data.title = app.data.title.slice(-1) + app.data.title.slice(0,-1), 100);
         </script>
     </head>
     <body>
@@ -28,7 +27,7 @@
         <section>
         <h2>Some examples</h2>
             <script>
-                properties.examples = [
+                app.data.examples = [
                     { name: "Binding", url: "examples/bind-update.html" },
                     { name: "Models", url: "examples/model.html" },
                     { name: "If and else", url: "examples/if-else.html" },
@@ -39,15 +38,15 @@
                     { name: "Todo list", url: "examples/todo.html" },
                     { name: "Transitions", url: "examples/transition.html" }
                 ];
-                properties.example = undefined;
-                properties.exampleHTML = "";
-                loadExample(properties.examples[0]);
+                app.data.example = undefined;
+                app.data.exampleHTML = "";
+                loadExample(app.data.examples[0]);
 
                 function loadExample(example) {
-                    properties.example = example;
+                    app.data.example = example;
                     fetch(example.url)
                         .then(resp => resp.text())
-                        .then(resp => properties.exampleHTML = resp);
+                        .then(resp => app.data.exampleHTML = resp);
                 }
             </script>
             <div class="examples">

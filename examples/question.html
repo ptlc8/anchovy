@@ -1,34 +1,34 @@
 <script>
     var questionExamples = ["Do you like feet ?", "Are you fine ?"];
-    properties.question = "";
-    properties.exampleIndex = 0;
-    properties.response = {
+    app.data.question = "";
+    app.data.exampleIndex = 0;
+    app.data.response = {
         image: ""
     };
-    properties.error = "";
+    app.data.error = "";
 
     setInterval(() => {
-        properties.exampleIndex++;
-        properties.exampleIndex %= questionExamples.length;
+        app.data.exampleIndex++;
+        app.data.exampleIndex %= questionExamples.length;
     }, 2000);
 
     function askQuestion() {
-        properties.response = { image: "" };
-        if (!properties.question.endsWith("?")) {
-            properties.error = "No question mark";
+        app.data.response = { image: "" };
+        if (!app.data.question.endsWith("?")) {
+            app.data.error = "No question mark";
             return;
         }
-        properties.error = "Loading...";
+        app.data.error = "Loading...";
         try {
             fetch("https://yesno.wtf/api")
                 .then(resp => resp.json())
                 .then(resp => {
-                    properties.response = resp;
-                    properties.error = "";
+                    app.data.response = resp;
+                    app.data.error = "";
                 })
-                .catch(e => properties.error = e.message);
+                .catch(e => app.data.error = e.message);
         } catch (e) {
-            properties.error = e.message;
+            app.data.error = e.message;
         }
     }
 </script>

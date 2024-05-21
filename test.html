@@ -1,21 +1,21 @@
-<script src="anchovy.js"></script>
-<script>
-    Object.assign(properties, {
-        number: 7,
-        text: "az",
-        smile: false
-    });
-    setInterval(() => properties.number = [6, 7, 8][~~(Math.random() * 3)], 1000);
-    function getSmileImage() {
-        return properties.smile ? "https://ambi.dev/pcv/assets/player.png" : "https://ambi.dev/bark/assets/icon.png";
-    }
-</script>
+<!DOCTYPE html>
+<html data-app="{ number: 7, text: 'az', smile: false }">
 
-<style>
-    body {
-        margin: 0 10% 10em 10%;
-    }
-</style>
+<head>
+    <script src="anchovy.js"></script>
+    <script>
+        setInterval(() => app.data.number = [6, 7, 8][~~(Math.random() * 3)], 1000);
+        function getSmileImage() {
+            return app.data.smile ? "https://ambi.dev/pcv/assets/player.png" : "https://ambi.dev/bark/assets/icon.png";
+        }
+    </script>
+
+    <style>
+        body {
+            margin: 0 10% 10em 10%;
+        }
+    </style>
+</head>
 
 <body>
     <h1>Tests</h1>
@@ -45,8 +45,8 @@
     <h3>Counter : -repeat</h3>
     <ul data-repeat="3" data-index="i">
         <li>
-            <span data-bind="i"></span><sup data-if="i==1">st</sup><sup data-elif="i==2">nd</sup><sup
-                data-else>rd</sup> element
+            <span data-bind="i"></span><sup data-if="i==1">st</sup><sup data-elif="i==2">nd</sup><sup data-else>rd</sup>
+            element
         </li>
         <li>
             <span data-bind="i+0.5"></span><sup>th</sup> element
@@ -62,3 +62,5 @@
     <h2>-view</h2>
     <div data-view="examples/question.html"></div>
 </body>
+
+</html>
