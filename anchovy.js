@@ -231,8 +231,7 @@ class App {
             var updateSet = new Set(el.getAttribute("data-update") ? el.getAttribute("data-update").split("|") : []);
             updateSet.add(el.dataset.model)
             el.dataset.update = [...updateSet].join("|");
-            el.removeEventListener("input", this.onModelInput);
-            el.addEventListener("input", this.onModelInput);
+            this.setEventListener(el, "input", this.onModelInput);
         }
 
         // data-update : if updatable add it to update registry
@@ -265,10 +264,10 @@ class App {
         for (let attr in el.dataset) {
             // data-on-* attributes
             if (attr.startsWith("on")) {
-                //let eventName = App.camelToKebab(attr.replace("on", ""));
-                let eventName = attr.replace("on", "").toLowerCase();
-                el.removeEventListener(eventName, this.onEvent);
-                el.addEventListener(eventName, this.onEvent);
+                let a = attr.replace("on", "").toLowerCase().split(".");
+                let name = a[0];
+                let modifiers = a.slice(1);
+                this.setEventListener(el, name, this.onEvent, modifiers);
             }
 
             // data-bind-* attributes
@@ -436,6 +435,19 @@ class App {
     }
 
     /**
+     * Set an event listener to an element
+     * @param {HTMLElement} el HTML element to attach the listener
+     * @param {string} event event name
+     * @param {Function} listener event listener
+     * @param {{capture: boolean, prevent: boolean, stop: boolean, capture: boolean, passive: boolean}} modifiers event listener modifiers
+     */
+    setEventListener(el, event, listener, modifiers = {}) { // TODO : add once modifier
+        console.log("Set event listener", event, listener);
+        el.removeEventListener("input", listener);
+        el.addEventListener("input", listener, { passive : modifiers.passive, capture: modifiers.capture });
+    }
+
+    /**
      * Function called when an input event is triggered on a model element
      * @param {Event} event input event data
      */
@@ -447,7 +459,8 @@ class App {
      * Function called when an event is triggered
      * @param {Event} event event data
      */
-    onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .capture, .passive
+    onEvent(event) {
+        //TODO : add modifiers
         var expression = event.currentTarget.dataset["on" + event.type.charAt(0).toUpperCase() + event.type.slice(1)];
         this.evalExpression(expression, event.currentTarget);
     }
