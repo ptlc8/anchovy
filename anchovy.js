@@ -116,13 +116,19 @@ class App {
     /**
      * @param {HTMLElement} root the root element of the application
      * @param {Object} data initial data
+     * @param {boolean} debugMode debug mode
      */
-    constructor(root, data = {}) {
+    constructor(root, data = {}, debugMode = false) {
         /**
          * Application data model
          * @type {Properties}
          */
         this.data = new Properties(this, data);
+        /**
+         * Debug mode
+         * @type {boolean}
+         */
+        this.debugMode = debugMode;
         /**
          * Store which elements are updatable and with which data
          * @type {Object<string, HTMLElement>}
@@ -141,6 +147,15 @@ class App {
         this.onModelInput = this.onModelInput.bind(this);
         this.onEvent = this.onEvent.bind(this);
         this.update(this.root);
+    }
+
+    /**
+     * Log a debug message or object
+     * @param {...Object} object 
+     */
+    debug(...object) {
+        if (this.debugMode)
+            console.log(...object);
     }
 
     /**
@@ -212,7 +227,7 @@ class App {
      * @param {string} prop property name
      */
     updateProp(prop) {
-        //console.log("Update: " + prop);
+        this.debug("Update: " + prop);
         for (let el of this.registry[prop] || [])
             this.update(el);
     }
@@ -552,6 +567,7 @@ App.camelToKebab = function (str) {
 if (document.documentElement.dataset.app) {
     var js = document.documentElement.dataset.app;
     var data = new Function("return " + js).call(document.documentElement);
-    this.app = new App(document.documentElement, data);
+    var debugMode = "debug" in document.documentElement.dataset;
+    this.app = new App(document.documentElement, data, debugMode=debugMode);
     window.addEventListener("load", () => this.app.update());
 }
