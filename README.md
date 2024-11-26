@@ -16,4 +16,4 @@ Just add the following line to your HTML:
 
 ## Examples
 
-See [index.html](index.html) for examples.
+See [src/index.html](src/index.html) for examples.
