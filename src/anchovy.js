@@ -82,24 +82,38 @@ class Context {
     }
 }
 
-function Properties(app, obj = {}, parent = null) {
+/**
+ * @constructor
+ * @param {App} app the application where the Properties is defined
+ * @param {any} obj data to wrap
+ * @param {string} id absolute path of the object
+ */
+function Properties(app, obj = {}, id = null) {
+    obj[Properties.app] = app;
+    obj[Properties.id] = id;
     for (key in obj) {
         if (obj[key] === null || obj[key] === undefined) continue;
+        childId = Properties.getChilId(obj, key);
         if (obj[key][Properties.target])
-            obj[key] = new Properties(app, obj[key][Properties.target], parent ? parent + "." + key : key);
+            obj[key] = new Properties(app, obj[key][Properties.target], childId);
         else if (obj[key] instanceof Object)
-            obj[key] = new Properties(app, obj[key], parent ? parent + "." + key : key);
+            obj[key] = new Properties(app, obj[key], childId);
     }
     return new Proxy(obj, {
         set(obj, prop, value) {
+            if ([Properties.target].includes(prop)) {
+                throw new Error("Cannot set " + prop + " property");
+            }
+            let app = obj[Properties.app];
+            let childId = Properties.getChilId(obj, prop);
             if (obj[prop] !== value || !(prop in obj)) {
                 var updateLength = obj instanceof Array && prop.match(/^[0-9]+$/) && parseInt(prop) >= obj.length;
                 obj[prop] = value === undefined || value === null ? value
-                    : value[Properties.target] ? new Properties(app, value[Properties.target], parent ? parent + "." + prop : prop)
-                        : value instanceof Object ? new Properties(app, value, parent ? parent + "." + prop : prop)
+                    : value[Properties.target] ? new Properties(app, value[Properties.target], childId)
+                        : value instanceof Object ? new Properties(app, value, childId)
                             : value;
-                if (updateLength) app.updateProp(parent ? parent + ".length" : "length");
-                app.updateProp(parent ? parent + "." + prop : prop);
+                if (updateLength) app.updateProp(Properties.getChilId(obj, "length"));
+                app.updateProp(childId);
             }
             return true;
         },
@@ -111,6 +125,18 @@ function Properties(app, obj = {}, parent = null) {
     });
 }
 Properties.target = Symbol("target");
+Properties.app = Symbol("app");
+Properties.id = Symbol("id");
+
+/**
+ * Get child id
+ * @param {Properties} properties
+ * @param {string} key
+ * @returns {string}
+ */
+Properties.getChilId = function (properties, key) {
+    return properties[Properties.id] ? properties[Properties.id] + "." + key : key;
+}
 
 class App {
     /**
@@ -151,7 +177,7 @@ class App {
 
     /**
      * Log a debug message or object
-     * @param {...Object} object 
+     * @param {...Object} object
      */
     debug(...object) {
         if (this.debugMode)
@@ -325,9 +351,10 @@ class App {
                     if (arrayElements[i]) {
                         // updating existing elements
                         this.updateContext(children[i], {
+                            [iVar]: array[i][1],
                             [el.dataset.index]: array[i][0],
                         }, {
-                            [iVar]: el.dataset[attr] + "." + array[i][0]
+                            [iVar]: array[i][1][Properties.id]
                         });
                         this.update(children[i]);
                     } else {
@@ -339,7 +366,7 @@ class App {
                             [iVar]: array[i][1],
                             [el.dataset.index]: array[i][0]
                         }, {
-                            [iVar]: el.dataset[attr] + "." + array[i][0]
+                            [iVar]: array[i][1][Properties.id]
                         });
                         this.update(newChild);
                         App.enterTransition(newChild, el.dataset.transition, el.dataset.transitionTime);
