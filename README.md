@@ -10,7 +10,7 @@ It doesn't need any server-side code.
 Just add the following line to your HTML:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/ptlc8/anchovy@master/anchovy.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/ptlc8/anchovy@master/src/anchovy.js"></script>
 ```
 
 
