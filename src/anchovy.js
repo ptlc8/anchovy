@@ -336,7 +336,8 @@ class App {
                 exploreChildren: for (let child of children) {
                     let item = this.evalExpression(iVar, child);
                     for (let entry of array) {
-                        if (item[Properties.target] === entry[1][Properties.target]) {
+                        // same primative value or same reference
+                        if (item?.[Properties.target] ? (item[Properties.target] === entry[1][Properties.target]) : (item === entry[1])) {
                             arrayElements[entry[0]] = child;
                             continue exploreChildren;
                         }
