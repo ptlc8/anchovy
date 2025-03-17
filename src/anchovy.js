@@ -120,8 +120,6 @@ function Properties(app, obj = {}, id = null) {
         get(obj, prop) {
             if (prop == Properties.target)
                 return obj;
-            if (prop === 'valueOf')
-                return () => obj;
             return obj[prop]
         }
     });
@@ -268,6 +266,8 @@ class App {
         var context = this.getContext(el);
         var updateChildren = true;
 
+        this.debug("Update element", el, context);
+
         // data-model
         if (el.dataset.model) {
             el.dataset.bind = el.dataset.model;
@@ -338,7 +338,8 @@ class App {
                 exploreChildren: for (let child of children) {
                     let item = this.evalExpression(iVar, child);
                     for (let entry of array) {
-                        if (item[Properties.target] === entry[1][Properties.target]) {
+                        // same primative value XOR same reference
+                        if ((item === entry[1]) != (item[Properties.target] === entry[1][Properties.target])) {
                             arrayElements[entry[0]] = child;
                             continue exploreChildren;
                         }
