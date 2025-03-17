@@ -120,6 +120,8 @@ function Properties(app, obj = {}, id = null) {
         get(obj, prop) {
             if (prop == Properties.target)
                 return obj;
+            if (prop === 'valueOf')
+                return () => obj;
             return obj[prop]
         }
     });
