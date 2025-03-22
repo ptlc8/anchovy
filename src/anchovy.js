@@ -352,6 +352,13 @@ class App {
                 el.innerText = value;
         }
 
+        // data-style attribute
+        if (el.dataset.style) {
+            let style = this.evalExpression(el.dataset.style, el);
+            for (let prop in style)
+                el.style[prop] = style[prop];
+        }
+
         for (let attr in el.dataset) {
             // data-on-* attributes
             if (attr.startsWith("on")) {
