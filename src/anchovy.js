@@ -315,7 +315,13 @@ class App {
             // data-bind-* attributes
             if (attr.startsWith("bind") && attr != "bind") {
                 let bindingAttr = App.camelToKebab(attr.replace("bind", ""));
-                el.setAttribute(bindingAttr, this.evalExpression(el.dataset[attr], el));
+                let value = this.evalExpression(el.dataset[attr], el);
+                if (value === null || value === false || value === undefined)
+                    el.removeAttribute(bindingAttr);
+                else if (value === true)
+                    el.setAttribute(bindingAttr, "");
+                else
+                    el.setAttribute(bindingAttr, value);
             }
 
             // data-foreach-* attribute
