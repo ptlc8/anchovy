@@ -249,20 +249,39 @@ class App {
     }
 
     /**
+     * Check if an HTML should be ignored
+     * @param {HTMLElement} el HTML element to check
+     */
+    isIgnored(el) {
+        while (el.parentElement != this.root) {
+            el = el.parentElement;
+            if ("ignore" in el.dataset || !el.parentElement)
+                return true;
+        }
+        return false;
+    }
+
+    /**
      * Update elements associated with a property
      * @param {string} prop property name
      */
     updateProp(prop) {
         this.debug("Update: " + prop);
-        for (let el of this.registry[prop] || [])
-            this.update(el);
+        for (let el of this.registry[prop] || []) {
+            if (!this.isIgnored(el)) {
+                this.update(el, true);
+            } else {
+                this.debug("Ignore update element", el);
+            }
+        }
     }
 
     /**
      * Update HTML element and its children
      * @param {HTMLElement?} el HTML element to update
      */
-    update(el = this.root) {
+    update(el = this.root, canTriggerSibling = false) {
+        this.debug("Update element:", el, canTriggerSibling);
         var context = this.getContext(el);
         var updateChildren = true;
 
@@ -285,7 +304,37 @@ class App {
         if (el.dataset.if) {
             let condition = this.evalExpression(el.dataset.if, el);
             App.showHide(el, condition, el.dataset.transition, el.dataset.transitionTime);
-            this.updateAfterIf(el, condition, context, el.dataset.transition, el.dataset.transitionTime);
+            if (canTriggerSibling) {
+                for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
+                    this.update(e);
+            }
+        }
+
+        // data-elif attribute
+        if (el.dataset.elif) {
+            let ifElement = this.getIfElement(el);
+            if (this.canTestElseValue(el)) {
+                let condition = this.evalExpression(el.dataset.elif, el);
+                App.showHide(el, condition, ifElement.transition, ifElement.transitionTime);
+            } else {
+                App.showHide(el, false, ifElement.transition, ifElement.transitionTime);
+            }
+            if (canTriggerSibling) {
+                for (let e = el.previousElementSibling; e?.dataset?.if || e?.dataset?.elif; e = e.previousElementSibling)
+                    this.update(e);
+                for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
+                    this.update(e);
+            }
+        }
+
+        // data-else attribute
+        else if (el.dataset.else != undefined) {
+            let ifElement = this.getIfElement(el);
+            App.showHide(el, this.canTestElseValue(el), ifElement.transition, ifElement.transitionTime);
+            if (canTriggerSibling) {
+                for (let e = el.previousElementSibling; e?.dataset?.if || e?.dataset?.elif; e = e.previousElementSibling)
+                    this.update(e);
+            }
         }
 
         // data-ignore attribute
@@ -336,15 +385,15 @@ class App {
                 if (!array || typeof array !== "object") {
                     console.error("`" + el.dataset[attr] + "` is not iterable nor an object", array);
                 }
-                array = Object.entries(array);
+                let arrayEntries = Object.entries(array);
                 let children = App.getChildren(el);
-                let arrayElements = [];
+                let existingElements = {};
                 exploreChildren: for (let child of children) {
                     let item = this.evalExpression(iVar, child);
-                    for (let entry of array) {
+                    for (let entry of arrayEntries) {
                         // same primative value or same reference
                         if (item?.[Properties.target] ? (item[Properties.target] === entry[1][Properties.target]) : (item === entry[1])) {
-                            arrayElements[entry[0]] = child;
+                            existingElements[entry[0]] = child;
                             continue exploreChildren;
                         }
                     }
@@ -353,15 +402,16 @@ class App {
                     App.leaveTransition(child, el.dataset.transition, el.dataset.transitionTime)
                         .then(() => child.remove());
                 }
-                for (let i = 0; i < array.length; i++) {
-                    children = App.getChildren(el);
-                    if (arrayElements[i]) {
+                for (let i = 0; i < arrayEntries.length; i++) {
+                    let children = App.getChildren(el);
+                    let entry = arrayEntries[i];
+                    if (existingElements[entry[0]]) {
                         // updating existing elements
                         this.updateContext(children[i], {
-                            [iVar]: array[i][1],
-                            [el.dataset.index]: array[i][0],
+                            [iVar]: entry[1],
+                            [el.dataset.index]: entry[0],
                         }, {
-                            [iVar]: array[i][1][Properties.id]
+                            [iVar]: entry[1][Properties.id]
                         });
                         this.update(children[i]);
                     } else {
@@ -370,10 +420,10 @@ class App {
                         else children[i - 1].insertAdjacentHTML("afterend", el.dataset.content);
                         let newChild = i == 0 ? el.firstElementChild : children[i - 1].nextElementSibling;
                         this.updateContext(newChild, {
-                            [iVar]: array[i][1],
-                            [el.dataset.index]: array[i][0]
+                            [iVar]: entry[1],
+                            [el.dataset.index]: entry[0]
                         }, {
-                            [iVar]: array[i][1][Properties.id]
+                            [iVar]: entry[1][Properties.id]
                         });
                         this.update(newChild);
                         App.enterTransition(newChild, el.dataset.transition, el.dataset.transitionTime);
@@ -442,29 +492,35 @@ class App {
     }
 
     /**
-     * Update HTML element after an if condition element
-     * @param {HTMLElement} el HTLM element with data-if attribute
-     * @param {boolean} ifCondition condition value of the if element
-     * @param {Context} context context of the HTML elements (with data-if or data-elif attributes)
-     * @param {string?} transition transition name
-     * @param {number?} transitionTime transition time in milliseconds
+     * If data-elif or data-else should be tested
+     * @param {HTMLElement} el HTML element with data-elif or data-else attribute
      */
-    updateAfterIf(el, ifCondition, context, transition = null, transitionTime = null) {
-        // data-elif attribute
-        if (el.nextElementSibling?.dataset?.elif != undefined) {
-            if (!ifCondition) {
-                let condition = this.evalExpression(el.nextElementSibling.dataset.elif, el);
-                App.showHide(el.nextElementSibling, condition, transition, transitionTime);
-                this.updateAfterIf(el.nextElementSibling, condition, context, transition, transitionTime);
-            } else {
-                App.showHide(el.nextElementSibling, false, transition, transitionTime);
-                this.updateAfterIf(el.nextElementSibling, true, context, transition, transitionTime);
-            }
+    canTestElseValue(el) {
+        let ifElement = el.previousElementSibling;
+        if (ifElement) {
+            if (ifElement.dataset.if)
+                return !this.evalExpression(ifElement.dataset.if, ifElement);
+            else if (ifElement.dataset.elif)
+                return this.canTestElseValue(ifElement) && !this.evalExpression(ifElement.dataset.elif, ifElement);
         }
-        // data-else attribute
-        else if (el.nextElementSibling?.dataset?.else != undefined) {
-            App.showHide(el.nextElementSibling, !ifCondition, transition, transitionTime);
+        console.warn("data-elif or data-else is not after a data-if or a data-elif, it was ignored", el);
+        return true;
+    }
+
+    /**
+     * Get data-if element
+     * @param {HTMLElement} el HTML element with data-elif or data-else attribute
+     */
+    getIfElement(el) {
+        let ifElement = el.previousElementSibling;
+        if (ifElement) {
+            if (ifElement.dataset.if)
+                return ifElement;
+            else if (ifElement.dataset.elif)
+                return this.getIfElement(ifElement);
         }
+        console.warn("data-elif or data-else is not after a data-if or a data-elif, it was ignored", el);
+        return null;
     }
 
     /**
