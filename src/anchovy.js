@@ -30,6 +30,7 @@ class Context {
                 } else {
                     app.getContext(el.parentElement)[prop] = value;
                 }
+                return true;
             },
             get(obj, prop, receiver) {
                 if ([Context.target, Context.equivalents].includes(prop) || prop in obj) {
