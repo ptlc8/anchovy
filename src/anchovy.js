@@ -5,6 +5,7 @@
 class Context {
     static target = Symbol("target");
     static equivalents = Symbol("equivalents");
+    static getEquivalent = Symbol("getEquivalent");
     /**
      * @param {App} app the application where the context is defined
      * @param {HTMLElement} el the HTML element related to the context
@@ -33,6 +34,14 @@ class Context {
             get(obj, prop, receiver) {
                 if ([Context.target, Context.equivalents].includes(prop) || prop in obj) {
                     return obj[prop];
+                } else if (prop == Context.getEquivalent) {
+                    return function (prop) {
+                        if (obj[Context.equivalents][prop])
+                            return obj[Context.equivalents][prop];
+                        else if (app.getContext(el.parentElement)[Context.getEquivalent])
+                            return app.getContext(el.parentElement)[Context.getEquivalent](prop);
+                        else return null;
+                    };
                 } else {
                     return app.getContext(el.parentElement)[prop];
                 }
@@ -67,14 +76,14 @@ class Context {
             prop = path[0];
             var found = true;
             for (let i = 1; i < path.length; i++) {
-                if (this[Context.equivalents] && prop in this[Context.equivalents]) {
-                    prop = this[Context.equivalents][prop];
+                if (this[Context.getEquivalent] && this[Context.getEquivalent](prop)) {
+                    prop = this[Context.getEquivalent](prop);
                     found = false;
                 }
                 prop += "." + path[i];
             }
-            if (this[Context.equivalents] && prop in this[Context.equivalents]) {
-                prop = this[Context.equivalents][prop];
+            if (this[Context.getEquivalent] && this[Context.getEquivalent](prop)) {
+                prop = this[Context.getEquivalent](prop);
                 found = false;
             }
         } while (!found);
@@ -340,6 +349,19 @@ class App {
         // data-ignore attribute
         if ("ignore" in el.dataset)
             return;
+
+        // data-with-* attribute
+        for (let attr in el.dataset) {
+            if (attr.startsWith("with")) {
+                let varName = attr.replace("with", "").charAt(0).toLowerCase() + attr.replace("with", "").slice(1);
+                let value = this.evalExpression(el.dataset[attr], el);
+                this.updateContext(el, {
+                    [varName]: value
+                }, {
+                    [varName]: value[Properties.id]
+                });
+            }
+        }
 
         // data-bind attribute
         if (el.dataset.bind) {
