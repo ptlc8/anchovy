@@ -250,12 +250,13 @@ class App {
      * Evaluate a JavaScript expression in the context of an element
      * @param {string} js JavaScript expression
      * @param {HTMLElement} element HTML element to define the context
+     * @param {Object} additionalContext additional viariables to pass to script
      * @returns {any} the result of the expression
      * @throws {Error} if an error occurs
      */
-    evalExpression(js, element) {
-        return new Function("_context", "with (_context) { return " + js + " }")
-            .call(element, this.getContext(element));
+    evalExpression(js, element, additionalContext = {}) {
+        return new Function("$context", "$additionalContext", "with ($context) with ($additionalContext) { return " + js + " }")
+            .call(element, this.getContext(element), additionalContext);
     }
 
     /**
@@ -298,7 +299,7 @@ class App {
         // data-model
         if (el.dataset.model) {
             el.dataset.bind = el.dataset.model;
-            var updateSet = new Set(el.getAttribute("data-update") ? el.getAttribute("data-update").split("|") : []);
+            var updateSet = new Set(el.dataset.update?.split("|") ?? []);
             updateSet.add(el.dataset.model)
             el.dataset.update = [...updateSet].join("|");
             el.removeEventListener("input", this.onModelInput);
@@ -584,7 +585,7 @@ class App {
      */
     onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .capture, .passive
         var expression = event.currentTarget.dataset["on" + event.type.charAt(0).toUpperCase() + event.type.slice(1)];
-        this.evalExpression(expression, event.currentTarget);
+        this.evalExpression(expression, event.currentTarget, { $event: event });
     }
 
 }
