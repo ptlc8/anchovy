@@ -380,7 +380,7 @@ class App {
         if (el.dataset.style) {
             let style = this.evalExpression(el.dataset.style, el);
             for (let prop in style)
-                el.style[prop] = style[prop];
+                el.style[prop] = style[prop] ?? null;
         }
 
         for (let attr in el.dataset) {
