@@ -1,34 +1,31 @@
-
 <!--<title data-bind="tasks.length+' tasks'" data-update="tasks.length"></title>-->
 
-<script>
-    app.data.tasks = [
-        { text: "buy fruits" },
-        { text: "never forget", striked: true }
-    ];
-</script>
-
-<h1>Todo list</h1>
-<ul data-foreach-task="tasks" data-index="index" data-update="tasks.length|tasks" data-transition>
-    <li>
-        <input type="checkbox" data-model="task.striked" />
-        <span contenteditable data-model="task.text" data-bind-class="'task'+(task.striked?' completed':'')" data-update="task.striked"></span>
-        <button data-on-click="tasks.splice(index,1)">Delete</button>
-    </li>
-</ul>
-<span data-bind-style="tasks.length>5?'color:red':''" data-update="tasks.length">
-    <span data-bind="tasks.length" data-update=""></span> items
-</span>
-<br />
-<button data-on-click="tasks.push({text:''})">Add</button>
-
-<style>
-    .task {
-        display: inline-block;
-        min-width: 100px;
-        border-bottom: dotted black 1px;
-    }
-    .completed {
-        text-decoration: line-through;
-    }
-</style>
+<div data-with-tasks="[
+    { text: 'buy fruits' },
+    { text: 'never forget', striked: true }
+]">
+    <h1>Todo list</h1>
+    <ul data-foreach-task="tasks" data-index="index" data-update="tasks.length|tasks" data-transition>
+        <li>
+            <input type="checkbox" data-model="task.striked" />
+            <span contenteditable data-model="task.text" data-bind-class="'task'+(task.striked?' completed':'')" data-update="task.striked"></span>
+            <button data-on-click="tasks.splice(index,1)">Delete</button>
+        </li>
+    </ul>
+    <span data-bind-style="tasks.length>5?'color:red':''" data-update="tasks.length">
+        <span data-bind="tasks.length" data-update=""></span> items
+    </span>
+    <br />
+    <button data-on-click="tasks.push({text:''})">Add</button>
+    
+    <style>
+        .task {
+            display: inline-block;
+            min-width: 100px;
+            border-bottom: dotted black 1px;
+        }
+        .completed {
+            text-decoration: line-through;
+        }
+    </style>
+</div>

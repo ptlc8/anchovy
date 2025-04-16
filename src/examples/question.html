@@ -1,43 +1,48 @@
-<script>
-    var questionExamples = ["Do you like feet ?", "Are you fine ?"];
-    app.data.question = "";
-    app.data.exampleIndex = 0;
-    app.data.response = {
-        image: ""
-    };
-    app.data.error = "";
-
-    setInterval(() => {
-        app.data.exampleIndex++;
-        app.data.exampleIndex %= questionExamples.length;
-    }, 2000);
-
-    function askQuestion() {
-        app.data.response = { image: "" };
-        if (!app.data.question.endsWith("?")) {
-            app.data.error = "No question mark";
-            return;
+<div data-with="{
+        questionExamples: [
+            'Do you like feet ?',
+            'Are you fine ?'
+        ],
+        question: '',
+        exampleIndex: 0,
+        response: {
+            image: ''
+        },
+        error: '',
+        askQuestion() {
+            this.response = { image: '' };
+            if (!this.question.endsWith('?')) {
+                this.error = 'No question mark';
+                return;
+            }
+            this.error = 'Loading...';
+            try {
+                fetch('https://yesno.wtf/api')
+                    .then(resp => resp.json())
+                    .then(resp => {
+                        this.response = resp;
+                        this.error = '';
+                    })
+                    .catch(e => this.error = e.message);
+            } catch (e) {
+                this.error = e.message;
+            }
         }
-        app.data.error = "Loading...";
-        try {
-            fetch("https://yesno.wtf/api")
-                .then(resp => resp.json())
-                .then(resp => {
-                    app.data.response = resp;
-                    app.data.error = "";
-                })
-                .catch(e => app.data.error = e.message);
-        } catch (e) {
-            app.data.error = e.message;
-        }
-    }
-</script>
+    }"
+    data-mount="
+    this.intervalId = setInterval(() => {
+        exampleIndex++;
+        exampleIndex %= questionExamples.length;
+    }, 2000);"
+    data-unmount="clearInterval(this.intervalId)">
 
-<h1>Ask yes/no question</h1>
+    <h1>Ask yes/no question</h1>
 
-<input data-model="question" data-bind-placeholder="questionExamples[exampleIndex]" data-update="exampleIndex" />
-<button data-on-click="askQuestion()">Ask</button>
-<span data-bind="error" data-update="error" style="color:red"></span>
+    <input data-model="question" data-bind-placeholder="questionExamples[exampleIndex]" data-update="exampleIndex" />
+    <button data-on-click="askQuestion()">Ask</button>
+    <span data-bind="error" data-update="error" style="color:red"></span>
 
-<br />
-<img data-bind-src="response.image" data-update="response" />
+    <br />
+    <img data-bind-src="response.image" data-update="response" />
+    
+</div>

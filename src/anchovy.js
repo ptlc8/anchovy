@@ -507,9 +507,9 @@ class App {
             for (let child of el.children)
                 this.update(child);
 
-        // data-include data-view attribute
-        if (el.dataset.view) {
-            fetch(el.dataset.view)
+        // data-include attribute
+        if (el.dataset.include) {
+            fetch(el.dataset.include)
                 .then(resp => resp.text())
                 .then(html => {
                     this.setInnerHTML(el, html);

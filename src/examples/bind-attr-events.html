@@ -1,14 +1,14 @@
-<script>
-    app.data.smile = false;
-    function getSmileImage() {
-        if (app.data.smile)
-            return "https://ambi.dev/pcv/assets/player.png";
+<div data-with="
+    this.smile = false;
+    this.getSmileImage = function() {
+        if (smile)
+            return 'https://ambi.dev/pcv/assets/player.png';
         else
-            return "https://ambi.dev/bark/assets/icon.png";
+            return 'https://ambi.dev/bark/assets/icon.png';
     }
-</script>
-
-<h2>data-bind-* and data-on-*</h2>
-
-<img width="200" data-bind-src="getSmileImage()" data-update="smile" />
-<button data-on-click="smile=!smile">Switch emotion</button>
+">  
+    <h2>data-bind-* and data-on-*</h2>
+    
+    <img width="200" data-bind-src="getSmileImage()" data-update="smile" />
+    <button data-on-click="smile=!smile">Switch emotion</button>
+</div>

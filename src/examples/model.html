@@ -1,10 +1,8 @@
-<script>
-    app.data.text = "Hello world";
-</script>
+<div data-with-text="Hello world">
+    <h2>data-model</h2>
 
-<h2>data-model</h2>
+    <input type="text" data-model="text" /> <br />
+    <input type="text" data-model="text" /> <br />
 
-<input type="text" data-model="text" /> <br />
-<input type="text" data-model="text" /> <br />
-
-Input : <span data-bind="text" data-update="text"></span>
+    Input : <span data-bind="text" data-update="text"></span>
+</div>

@@ -1,9 +1,8 @@
-<script>
-    app.data.number = 7;
+<div data-with-number="7" data-mount="
     // number will increment every second
-    setInterval(() => app.data.number++, 1000);
-</script>
+    setInterval(() => number++, 1000);
+">
+    <h2>data-bind and data-update</h2>
 
-<h2>data-bind and data-update</h2>
-
-number is <span data-model="number"></span>
+    number is <span data-model="number"></span>
+</div>
