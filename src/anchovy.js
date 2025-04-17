@@ -305,130 +305,136 @@ class App {
         var context = this.getContext(el);
         var updateChildren = true;
 
-        // data-model
-        if (el.dataset.model) {
-            el.dataset.bind = el.dataset.model;
-            var updateSet = new Set(el.dataset.update?.split("|") ?? []);
-            updateSet.add(el.dataset.model)
-            el.dataset.update = [...updateSet].join("|");
-            this.setEventListener(el, "input", this.onModelInput);
-        }
+        const attrs = Object.keys(el.dataset);
+        for (let i = 0; i < attrs.length; i++) {
+            let { name, param, modifiers } = App.parseDataAttributeName(attrs[i]);
+            let content = el.dataset[attrs[i]];
 
-        // data-update : if updatable add it to update registry
-        if (el.dataset.update) {
-            this.register(el, context.findUpdatesName ? context.findUpdatesName(el.dataset.update) : el.dataset.update.split("|")); // TODO : tmp
-        }
-
-        // data-if attribute
-        if (el.dataset.if) {
-            let condition = this.evalExpression(el.dataset.if, el);
-            App.showHide(el, condition, el.dataset.transition, el.dataset.transitionTime);
-            if (canTriggerSibling) {
-                for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
-                    this.update(e);
+            // data-model
+            if (name == "model") {
+                // Set value
+                let value = this.evalExpression(content, el);
+                if ("INPUT" == el.tagName) {
+                    el[el.type == "checkbox" ? "checked" : "value"] = value;
+                } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
+                    el.value = value;
+                } else if (el.innerText !== value)
+                    el.innerText = value;
+                // Add to update registry
+                this.register(el, context.findUpdatesName ? context.findUpdatesName(content) : content.split("|")); // TODO : tmp
+                // Set input event listener
+                this.setEventListener(el, "input", this.onModelInput);
             }
-        }
 
-        // data-elif attribute
-        if (el.dataset.elif) {
-            let ifElement = this.getIfElement(el);
-            if (this.canTestElseValue(el)) {
-                let condition = this.evalExpression(el.dataset.elif, el);
-                App.showHide(el, condition, ifElement.transition, ifElement.transitionTime);
-            } else {
-                App.showHide(el, false, ifElement.transition, ifElement.transitionTime);
+            // data-update : if updatable add it to update registry
+            if (name == "update") {
+                this.register(el, context.findUpdatesName ? context.findUpdatesName(content) : content.split("|")); // TODO : tmp
             }
-            if (canTriggerSibling) {
-                for (let e = el.previousElementSibling; e?.dataset?.if || e?.dataset?.elif; e = e.previousElementSibling)
-                    this.update(e);
-                for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
-                    this.update(e);
+
+            // data-if attribute
+            if (name == "if") {
+                let condition = this.evalExpression(content, el);
+                App.showHide(el, condition, el.dataset.transition, el.dataset.transitionTime);
+                if (canTriggerSibling) {
+                    for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
+                        this.update(e);
+                }
             }
-        }
 
-        // data-else attribute
-        else if (el.dataset.else != undefined) {
-            let ifElement = this.getIfElement(el);
-            App.showHide(el, this.canTestElseValue(el), ifElement.transition, ifElement.transitionTime);
-            if (canTriggerSibling) {
-                for (let e = el.previousElementSibling; e?.dataset?.if || e?.dataset?.elif; e = e.previousElementSibling)
-                    this.update(e);
+            // data-elif attribute
+            if (name == "elif") {
+                let ifElement = this.getIfElement(el);
+                if (this.canTestElseValue(el)) {
+                    let condition = this.evalExpression(content, el);
+                    App.showHide(el, condition, ifElement.transition, ifElement.transitionTime);
+                } else {
+                    App.showHide(el, false, ifElement.transition, ifElement.transitionTime);
+                }
+                if (canTriggerSibling) {
+                    for (let e = el.previousElementSibling; e?.dataset?.if || e?.dataset?.elif; e = e.previousElementSibling)
+                        this.update(e);
+                    for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
+                        this.update(e);
+                }
             }
-        }
 
-        // data-ignore attribute
-        if ("ignore" in el.dataset)
-            return;
+            // data-else attribute
+            if (name == "else") {
+                let ifElement = this.getIfElement(el);
+                App.showHide(el, this.canTestElseValue(el), ifElement.transition, ifElement.transitionTime);
+                if (canTriggerSibling) {
+                    for (let e = el.previousElementSibling; e?.dataset?.if || e?.dataset?.elif; e = e.previousElementSibling)
+                        this.update(e);
+                }
+            }
 
-        // data-with-* attribute
-        for (let attr in el.dataset) {
-            if (attr.startsWith("with")) {
-                let varName = attr.replace("with", "").charAt(0).toLowerCase() + attr.replace("with", "").slice(1);
-                let value = this.evalExpression(el.dataset[attr], el);
+            // data-ignore attribute
+            if (name == "ignore")
+                return;
+
+            // data-with-* attribute
+            if (name == "with") {
+                let value = this.evalExpression(content, el);
                 this.updateContext(el, {
-                    [varName]: value
+                    [param]: value
                 }, {
-                    [varName]: value[Properties.id]
+                    [param]: value[Properties.id]
                 });
             }
-        }
 
-        // data-bind attribute
-        if (el.dataset.bind) {
-            let value = this.evalExpression(el.dataset.bind, el);
-            if ("INPUT" == el.tagName) {
-                el[el.type == "checkbox" ? "checked" : "value"] = value;
-            } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
-                el.value = value;
-            } else if (el.innerText !== value)
-                el.innerText = value;
-        }
+            // data-bind-* and data-bind attributes
+            if (name == "bind") {
+                let value = this.evalExpression(content, el);
+                if (param) {
+                    let bindingAttr = App.camelToKebab(param);;
+                    if (value === null || value === false || value === undefined)
+                        el.removeAttribute(bindingAttr);
+                    else if (value === true)
+                        el.setAttribute(bindingAttr, "");
+                    else
+                        el.setAttribute(bindingAttr, value);
+                } else {
+                    if ("INPUT" == el.tagName) {
+                        el[el.type == "checkbox" ? "checked" : "value"] = value;
+                    } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
+                        el.value = value;
+                    } else if (el.innerText !== value)
+                        el.innerText = value;
+                }
+            }
 
-        // data-style attribute
-        if (el.dataset.style) {
-            let style = this.evalExpression(el.dataset.style, el);
-            for (let prop in style)
-                el.style[prop] = style[prop] ?? null;
-        }
+            // data-style-* and data-style attributes
+            if (name == "style") {
+                if (param) {
+                    let value = this.evalExpression(content, el);
+                    el.style[param] = value ?? null;
+                } else {
+                    let style = this.evalExpression(content, el);
+                    for (let prop in style)
+                        el.style[prop] = style[prop] ?? null;
+                }
+            }
 
-        for (let attr in el.dataset) {
             // data-on-* attributes
-            if (attr.startsWith("on")) {
-                //let eventName = App.camelToKebab(attr.replace("on", ""));
-                let eventName = attr.replace("on", "").toLowerCase();
-                this.setEventListener(el, eventName, this.onEvent);
-            }
-
-            // data-bind-* attributes
-            if (attr.startsWith("bind") && attr != "bind") {
-                let bindingAttr = App.camelToKebab(attr.replace("bind", ""));
-                let value = this.evalExpression(el.dataset[attr], el);
-                if (value === null || value === false || value === undefined)
-                    el.removeAttribute(bindingAttr);
-                else if (value === true)
-                    el.setAttribute(bindingAttr, "");
-                else
-                    el.setAttribute(bindingAttr, value);
-            }
-
-            // data-style-* attributes
-            if (attr.startsWith("style") && attr != "style") {
-                let styleAttr = App.camelToKebab(attr.replace("style", ""));
-                let value = this.evalExpression(el.dataset[attr], el);
-                el.style[styleAttr] = value ?? null;
+            if (name == "on") {
+                this.setEventListener(el, param, this.onEvent, {
+                    passive: modifiers.includes("passive"),
+                    capture: modifiers.includes("capture"),
+                    once: modifiers.includes("once")
+                });
             }
 
             // data-foreach-* attribute
-            if (attr.startsWith("foreach")) {
-                let iVar = attr.replace("foreach", "").charAt(0).toLowerCase() + attr.replace("foreach", "").slice(1);
+            if (name == "foreach") {
+                let iVar = param;
                 // if first run
                 if (el.dataset.content == undefined) {
                     el.dataset.content = el.innerHTML;
                     el.innerHTML = "";
                 }
-                let array = this.evalExpression(el.dataset[attr], el);
+                let array = this.evalExpression(content, el);
                 if (!array || typeof array !== "object") {
-                    console.error("`" + el.dataset[attr] + "` is not iterable nor an object", array);
+                    console.error(`"${content}" is not iterable nor an object`, array);
                 }
                 let arrayEntries = Object.entries(array);
                 let children = App.getChildren(el);
@@ -476,62 +482,65 @@ class App {
                 }
                 updateChildren = false;
             }
-        }
 
-        // data-repeat attribute
-        if (el.dataset.repeat) {
-            // if first run
-            if (el.dataset.content == undefined) {
-                el.dataset.content = el.innerHTML;
-                el.innerHTML = "";
-            }
-            let repeat = this.evalExpression(el.dataset.repeat, el);
-            let last = App.getChildren(el).length;
-            if (repeat > last) {
-                // adding new elements
-                for (let i = last; i < repeat; i++)
-                    el.insertAdjacentHTML("beforeend", el.dataset.content);
-                let children = App.getChildren(el);
-                for (let i = last; i < repeat; i++) {
-                    this.updateContext(children[i], {
-                        [el.dataset.index]: i,
-                    });
-                    this.update(children[i]);
-                    App.enterTransition(children[i], el.dataset.transition, el.dataset.transitionTime)
+            // data-repeat attribute
+            if (name == "repeat") {
+                // if first run
+                if (el.dataset.content == undefined) {
+                    el.dataset.content = el.innerHTML;
+                    el.innerHTML = "";
                 }
-            } else {
-                // or removing excess elements
-                let children = App.getChildren(el);
-                for (let i = repeat; i < last; i++) {
-                    children[i].dataset.ignore = "";
-                    App.leaveTransition(children[i], el.dataset.transition, el.dataset.transitionTime)
-                        .then(child => child.remove());
+                let repeat = this.evalExpression(content, el);
+                let last = App.getChildren(el).length;
+                if (repeat > last) {
+                    // adding new elements
+                    for (let i = last; i < repeat; i++)
+                        el.insertAdjacentHTML("beforeend", el.dataset.content);
+                    let children = App.getChildren(el);
+                    for (let i = last; i < repeat; i++) {
+                        this.updateContext(children[i], {
+                            [el.dataset.index]: i,
+                        });
+                        this.update(children[i]);
+                        App.enterTransition(children[i], el.dataset.transition, el.dataset.transitionTime)
+                    }
+                } else {
+                    // or removing excess elements
+                    let children = App.getChildren(el);
+                    for (let i = repeat; i < last; i++) {
+                        children[i].dataset.ignore = "";
+                        App.leaveTransition(children[i], el.dataset.transition, el.dataset.transitionTime)
+                            .then(child => child.remove());
+                    }
                 }
+                updateChildren = false;
             }
-            updateChildren = false;
-        }
 
-        // data-html attribute
-        if (el.dataset.html) {
-            this.setInnerHTML(el, this.evalExpression(el.dataset.html, el));
+            // data-html attribute
+            if (name == "html") {
+                this.setInnerHTML(el, this.evalExpression(content, el));
+            }
+
+            
+            // data-view attribute
+            if (name == "view") {
+                fetch(content)
+                    .then(resp => resp.text())
+                    .then(html => {
+                        this.setInnerHTML(el, html);
+                        for (let child of el.children) {
+                            this.update(child);
+                        }
+                    })
+                    .catch(err => console.error(`Error loading view "${content}":`, err?.message ?? err));
+                updateChildren = false;
+            }
         }
 
         // Update children
         if (updateChildren)
             for (let child of el.children)
                 this.update(child);
-
-        // data-include data-view attribute
-        if (el.dataset.view) {
-            fetch(el.dataset.view)
-                .then(resp => resp.text())
-                .then(html => {
-                    this.setInnerHTML(el, html);
-                    for (let child of el.children) {
-                        this.update(child);
-                    }
-                });
-        }
 
         this.clean();
     }
@@ -610,11 +619,48 @@ class App {
      * Function called when an event is triggered
      * @param {Event} event event data
      */
-    onEvent(event) { // TODO : add modifiers like .once, .prevent, .stop, .capture, .passive
-        var expression = event.currentTarget.dataset["on" + event.type.charAt(0).toUpperCase() + event.type.slice(1)];
+    onEvent(event) {
+        let attr = App.findDataAttributeName(event.currentTarget.dataset, "on", event.type);
+        let { modifiers } = App.parseDataAttributeName(attr);
+        if (modifiers.stop)
+            event.stopPropagation();
+        if (modifiers.prevent)
+            event.preventDefault();
+        var expression = event.currentTarget.dataset[attr];
         this.evalExpression(expression, event.currentTarget, { $event: event });
     }
 
+}
+
+/**
+ * Parse a dataset attribute (data-)
+ * @param {string} attr attribute name
+ * @returns {{ name: string, param: string, modifiers: string[] }}
+ */
+App.parseDataAttributeName = function (attr) {
+    let name = attr.match(/[a-z]+|/)[0];
+    let a = attr.replace(name, "").split(".");
+    a[0] = a[0].charAt(0).toLowerCase() + a[0].substring(1);
+    return {
+        name,
+        param: a[0],
+        modifiers: a.slice(1)
+    };
+}
+
+/**
+ * Find a dataset attribute name
+ * @param {DOMStringMap} dataset
+ * @param {string} name
+ * @param {string?} param
+ * @returns {string?} attribute name
+ */
+App.findDataAttributeName = function (dataset, name, param = "") {
+    let attrStart = name + param.charAt(0).toUpperCase() + param.substring(1);
+    for (let attr in dataset)
+        if (attr.startsWith(attrStart))
+            return attr;
+    return null;
 }
 
 /**
