@@ -255,8 +255,17 @@ class App {
      * @throws {Error} if an error occurs
      */
     evalExpression(js, element, additionalContext = {}) {
-        return new Function("$context", "$additionalContext", "with ($context) with ($additionalContext) { return " + js + " }")
-            .call(element, this.getContext(element), additionalContext);
+        try {
+            return new Function("$context", "$additionalContext", "with ($context) with ($additionalContext) { return " + js + " }")
+                .call(element, this.getContext(element), additionalContext);
+        } catch (err) {
+            console.groupCollapsed("Error evaluating expression:", err?.message ?? err);
+            console.log(`Expression: "${js}"`);
+            console.log("Element:", element);
+            console.log("Context:", this.getContext(element));
+            console.log("Additional context:", additionalContext);
+            console.groupEnd();
+        }
     }
 
     /**
@@ -298,24 +307,25 @@ class App {
 
         for (let attr in el.dataset) {
             let { name, param, modifiers } = App.parseDataAttributeName(attr);
+            let content = el.dataset[attr];
 
             // data-model
             if (name == "model") {
-                el.dataset.bind = value;
+                el.dataset.bind = content;
                 var updateSet = new Set(el.dataset.update?.split("|") ?? []);
-                updateSet.add(value);
+                updateSet.add(content);
                 el.dataset.update = [...updateSet].join("|");
                 this.setEventListener(el, "input", this.onModelInput);
             }
 
             // data-update : if updatable add it to update registry
             if (name == "update") {
-                this.register(el, context.findUpdatesName ? context.findUpdatesName(value) : value.split("|")); // TODO : tmp
+                this.register(el, context.findUpdatesName ? context.findUpdatesName(content) : content.split("|")); // TODO : tmp
             }
 
             // data-if attribute
             if (name == "if") {
-                let condition = this.evalExpression(value, el);
+                let condition = this.evalExpression(content, el);
                 App.showHide(el, condition, el.dataset.transition, el.dataset.transitionTime);
                 if (canTriggerSibling) {
                     for (let e = el.nextElementSibling; e?.dataset?.elif || e?.dataset?.else != undefined; e = e.nextElementSibling)
@@ -327,7 +337,7 @@ class App {
             if (name == "elif") {
                 let ifElement = this.getIfElement(el);
                 if (this.canTestElseValue(el)) {
-                    let condition = this.evalExpression(value, el);
+                    let condition = this.evalExpression(content, el);
                     App.showHide(el, condition, ifElement.transition, ifElement.transitionTime);
                 } else {
                     App.showHide(el, false, ifElement.transition, ifElement.transitionTime);
@@ -356,7 +366,7 @@ class App {
 
             // data-with-* attribute
             if (name == "with") {
-                let value = this.evalExpression(value, el);
+                let value = this.evalExpression(content, el);
                 this.updateContext(el, {
                     [param]: value
                 }, {
@@ -364,22 +374,38 @@ class App {
                 });
             }
 
-            // data-bind attribute
+            // data-bind-* and data-bind attributes
             if (name == "bind") {
-                let value = this.evalExpression(value, el);
-                if ("INPUT" == el.tagName) {
-                    el[el.type == "checkbox" ? "checked" : "value"] = value;
-                } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
-                    el.value = value;
-                } else if (el.innerText !== value)
-                    el.innerText = value;
+                if (param) {
+                    let bindingAttr = App.camelToKebab(param);
+                    let value = this.evalExpression(content, el);
+                    if (value === null || value === false || value === undefined)
+                        el.removeAttribute(bindingAttr);
+                    else if (value === true)
+                        el.setAttribute(bindingAttr, "");
+                    else
+                        el.setAttribute(bindingAttr, value);
+                } else {
+                    let value = this.evalExpression(content, el);
+                    if ("INPUT" == el.tagName) {
+                        el[el.type == "checkbox" ? "checked" : "value"] = value;
+                    } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
+                        el.value = value;
+                    } else if (el.innerText !== value)
+                        el.innerText = value;
+                }
             }
 
-            // data-style attribute
+            // data-style-* and data-style attributes
             if (name == "style") {
-                let style = this.evalExpression(value, el);
-                for (let prop in style)
-                    el.style[prop] = style[prop] ?? null;
+                if (param) {
+                    let value = this.evalExpression(content, el);
+                    el.style[param] = value ?? null;
+                } else {
+                    let style = this.evalExpression(content, el);
+                    for (let prop in style)
+                        el.style[prop] = style[prop] ?? null;
+                }
             }
 
             // data-on-* attributes
@@ -391,18 +417,6 @@ class App {
                 });
             }
 
-            // data-bind-* attributes
-            if (name == "bind" && param) {
-                let bindingAttr = App.camelToKebab(param);
-                let value = this.evalExpression(value, el);
-                if (value === null || value === false || value === undefined)
-                    el.removeAttribute(bindingAttr);
-                else if (value === true)
-                    el.setAttribute(bindingAttr, "");
-                else
-                    el.setAttribute(bindingAttr, value);
-            }
-
             // data-foreach-* attribute
             if (name == "foreach") {
                 let iVar = param;
@@ -411,9 +425,9 @@ class App {
                     el.dataset.content = el.innerHTML;
                     el.innerHTML = "";
                 }
-                let array = this.evalExpression(value, el);
+                let array = this.evalExpression(content, el);
                 if (!array || typeof array !== "object") {
-                    console.error(`"${value}" is not iterable nor an object`, array);
+                    console.error(`"${content}" is not iterable nor an object`, array);
                 }
                 let arrayEntries = Object.entries(array);
                 let children = App.getChildren(el);
@@ -469,7 +483,7 @@ class App {
                     el.dataset.content = el.innerHTML;
                     el.innerHTML = "";
                 }
-                let repeat = this.evalExpression(value, el);
+                let repeat = this.evalExpression(content, el);
                 let last = App.getChildren(el).length;
                 if (repeat > last) {
                     // adding new elements
@@ -497,7 +511,22 @@ class App {
 
             // data-html attribute
             if (name == "html") {
-                this.setInnerHTML(el, this.evalExpression(value, el));
+                this.setInnerHTML(el, this.evalExpression(content, el));
+            }
+
+            
+            // data-view attribute
+            if (name == "view") {
+                fetch(content)
+                    .then(resp => resp.text())
+                    .then(html => {
+                        this.setInnerHTML(el, html);
+                        for (let child of el.children) {
+                            this.update(child);
+                        }
+                    })
+                    .catch(err => console.error(`Error loading view "${content}":`, err?.message ?? err));
+                updateChildren = false;
             }
         }
 
@@ -505,18 +534,6 @@ class App {
         if (updateChildren)
             for (let child of el.children)
                 this.update(child);
-
-        // data-include data-view attribute
-        if (el.dataset.view) {
-            fetch(el.dataset.view)
-                .then(resp => resp.text())
-                .then(html => {
-                    this.setInnerHTML(el, html);
-                    for (let child of el.children) {
-                        this.update(child);
-                    }
-                });
-        }
 
         this.clean();
     }
@@ -578,7 +595,7 @@ class App {
      * @param {AddEventListenerOptions?} options event listener options
      */
     setEventListener(el, event, listener, options = undefined) {
-        debug("Set event listener", event, listener);
+        this.debug("Set event listener", event, listener);
         el.removeEventListener(event, listener);
         el.addEventListener(event, listener, options);
     }
@@ -618,23 +635,23 @@ App.parseDataAttributeName = function (attr) {
     let a = attr.replace(name, "").split(".");
     a[0] = a[0].charAt(0).toLowerCase() + a[0].substring(1);
     return {
-        name
+        name,
         param: a[0],
         modifiers: a.slice(1)
     };
 }
 
 /**
- * Find a dataset attribute name (data-)
- * @param {HTMLElement} el
+ * Find a dataset attribute name
+ * @param {DOMStringMap} dataset
  * @param {string} name
- * @param {string} param
+ * @param {string?} param
  * @returns {string?} attribute name
  */
-App.findDataAttributeName = function (el, name, param) {
-    let attr = name + param.charAt(0).toUpperCase() + param.substring(1);
-    for (let attr in el.dataset) {
-        if (attr.startsWith(attr))
+App.findDataAttributeName = function (dataset, name, param = "") {
+    let attrStart = name + param.charAt(0).toUpperCase() + param.substring(1);
+    for (let attr in dataset)
+        if (attr.startsWith(attrStart))
             return attr;
     return null;
 }
