@@ -305,16 +305,24 @@ class App {
         var context = this.getContext(el);
         var updateChildren = true;
 
-        for (let attr in el.dataset) {
-            let { name, param, modifiers } = App.parseDataAttributeName(attr);
-            let content = el.dataset[attr];
+        const attrs = Object.keys(el.dataset);
+        for (let i = 0; i < attrs.length; i++) {
+            let { name, param, modifiers } = App.parseDataAttributeName(attrs[i]);
+            let content = el.dataset[attrs[i]];
 
             // data-model
             if (name == "model") {
-                el.dataset.bind = content;
-                var updateSet = new Set(el.dataset.update?.split("|") ?? []);
-                updateSet.add(content);
-                el.dataset.update = [...updateSet].join("|");
+                // Set value
+                let value = this.evalExpression(content, el);
+                if ("INPUT" == el.tagName) {
+                    el[el.type == "checkbox" ? "checked" : "value"] = value;
+                } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
+                    el.value = value;
+                } else if (el.innerText !== value)
+                    el.innerText = value;
+                // Add to update registry
+                this.register(el, context.findUpdatesName ? context.findUpdatesName(content) : content.split("|")); // TODO : tmp
+                // Set input event listener
                 this.setEventListener(el, "input", this.onModelInput);
             }
 
@@ -376,9 +384,9 @@ class App {
 
             // data-bind-* and data-bind attributes
             if (name == "bind") {
+                let value = this.evalExpression(content, el);
                 if (param) {
-                    let bindingAttr = App.camelToKebab(param);
-                    let value = this.evalExpression(content, el);
+                    let bindingAttr = App.camelToKebab(param);;
                     if (value === null || value === false || value === undefined)
                         el.removeAttribute(bindingAttr);
                     else if (value === true)
@@ -386,7 +394,6 @@ class App {
                     else
                         el.setAttribute(bindingAttr, value);
                 } else {
-                    let value = this.evalExpression(content, el);
                     if ("INPUT" == el.tagName) {
                         el[el.type == "checkbox" ? "checked" : "value"] = value;
                     } else if (["TEXTAREA", "SELECT"].includes(el.tagName)) {
