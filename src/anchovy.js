@@ -255,8 +255,17 @@ class App {
      * @throws {Error} if an error occurs
      */
     evalExpression(js, element, additionalContext = {}) {
-        return new Function("$context", "$additionalContext", "with ($context) with ($additionalContext) { return " + js + " }")
-            .call(element, this.getContext(element), additionalContext);
+        try {
+            return new Function("$context", "$additionalContext", "with ($context) with ($additionalContext) { return " + js + " }")
+                .call(element, this.getContext(element), additionalContext);
+        } catch (err) {
+            console.groupCollapsed("Error evaluating expression:", err?.message ?? err);
+            console.log(`Expression: "${js}"`);
+            console.log("Element:", element);
+            console.log("Context:", this.getContext(element));
+            console.log("Additional context:", additionalContext);
+            console.groupEnd();
+        }
     }
 
     /**
@@ -302,8 +311,7 @@ class App {
             var updateSet = new Set(el.dataset.update?.split("|") ?? []);
             updateSet.add(el.dataset.model)
             el.dataset.update = [...updateSet].join("|");
-            el.removeEventListener("input", this.onModelInput);
-            el.addEventListener("input", this.onModelInput);
+            this.setEventListener(el, "input", this.onModelInput);
         }
 
         // data-update : if updatable add it to update registry
@@ -388,8 +396,7 @@ class App {
             if (attr.startsWith("on")) {
                 //let eventName = App.camelToKebab(attr.replace("on", ""));
                 let eventName = attr.replace("on", "").toLowerCase();
-                el.removeEventListener(eventName, this.onEvent);
-                el.addEventListener(eventName, this.onEvent);
+                this.setEventListener(el, eventName, this.onEvent);
             }
 
             // data-bind-* attributes
@@ -402,6 +409,13 @@ class App {
                     el.setAttribute(bindingAttr, "");
                 else
                     el.setAttribute(bindingAttr, value);
+            }
+
+            // data-style-* attributes
+            if (attr.startsWith("style") && attr != "style") {
+                let styleAttr = App.camelToKebab(attr.replace("style", ""));
+                let value = this.evalExpression(el.dataset[attr], el);
+                el.style[styleAttr] = value ?? null;
             }
 
             // data-foreach-* attribute
@@ -569,6 +583,19 @@ class App {
             newScript.appendChild(document.createTextNode(oldScript.innerHTML));
             oldScript.parentNode.replaceChild(newScript, oldScript);
         });
+    }
+
+    /**
+     * Set an event listener to an element
+     * @param {HTMLElement} el HTML element to attach the listener
+     * @param {string} event event name
+     * @param {Function} listener event listener
+     * @param {AddEventListenerOptions?} options event listener options
+     */
+    setEventListener(el, event, listener, options = undefined) {
+        this.debug("Set event listener", event, listener);
+        el.removeEventListener(event, listener);
+        el.addEventListener(event, listener, options);
     }
 
     /**
