@@ -24,7 +24,7 @@ class Context {
         var ctx = new Proxy(this, {
             set(obj, prop, value) {
                 if ([Context.target, Context.equivalents].includes(prop)) {
-                    throw new Error("Cannot set " + prop + " property");
+                    throw new Error("Cannot set " + prop.toString() + " property");
                 } else if (prop in obj) {
                     obj[prop] = value;
                 } else {
@@ -101,9 +101,9 @@ class Context {
 function Properties(app, obj = {}, id = null) {
     obj[Properties.app] = app;
     obj[Properties.id] = id;
-    for (key in obj) {
+    for (let key in obj) {
         if (obj[key] === null || obj[key] === undefined) continue;
-        childId = Properties.getChilId(obj, key);
+        let childId = Properties.getChilId(obj, key);
         if (obj[key][Properties.target])
             obj[key] = new Properties(app, obj[key][Properties.target], childId);
         else if (obj[key] instanceof Object)
@@ -716,6 +716,6 @@ if (document.documentElement.dataset.app) {
     var js = document.documentElement.dataset.app;
     var data = new Function("return " + js).call(document.documentElement);
     var debugMode = "debug" in document.documentElement.dataset;
-    this.app = new App(document.documentElement, data, debugMode=debugMode);
+    this.app = new App(document.documentElement, data, debugMode);
     window.addEventListener("load", () => this.app.update());
 }
