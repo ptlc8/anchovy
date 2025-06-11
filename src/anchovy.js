@@ -632,7 +632,7 @@ App.showHide = function (el, showCondition, transition = null, time = 500) {
         App.leaveTransition(el, transition, time).then(() => el.style.display = "none");
         el.dataset.ignore = "";
     }
-}
+};
 
 /**
  * Remove element with transition
@@ -661,7 +661,7 @@ App.leaveTransition = function (el, transition = null, time = 500) {
             }, time);
         }
     });
-}
+};
 
 /**
  * Add element with transition
@@ -692,7 +692,7 @@ App.enterTransition = function (el, transition = null, time = 500) {
             }, time);
         }
     });
-}
+};
 
 /**
  * Get all children of an HTML element (excluding elements with data-ignore attribute)
@@ -701,7 +701,7 @@ App.enterTransition = function (el, transition = null, time = 500) {
  */
 App.getChildren = function (el) {
     return Array.from(el.children).filter(child => !("ignore" in child.dataset));
-}
+};
 
 /**
  * Convert a camelCase string to a kebab-case string
@@ -710,12 +710,14 @@ App.getChildren = function (el) {
  */
 App.camelToKebab = function (str) {
     return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-}
+};
 
-if (document.documentElement.dataset.app) {
-    var js = document.documentElement.dataset.app;
-    var data = new Function("return " + js).call(document.documentElement);
-    var debugMode = "debug" in document.documentElement.dataset;
-    this.app = new App(document.documentElement, data, debugMode);
-    window.addEventListener("load", () => this.app.update());
-}
+(function () {
+    if ("app" in document.documentElement.dataset) {
+        var js = document.documentElement.dataset.app || "{}";
+        var data = new Function("return " + js).call(document.documentElement);
+        var debugMode = "debug" in document.documentElement.dataset;
+        this.app = new App(document.documentElement, data, debugMode);
+        window.addEventListener("load", () => this.app.update());
+    }
+})();
